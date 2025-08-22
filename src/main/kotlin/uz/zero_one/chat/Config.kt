@@ -55,7 +55,7 @@ class WebSocketConfig : WebSocketMessageBrokerConfigurer {
 
     override fun registerStompEndpoints(registry: StompEndpointRegistry) {
         registry.addEndpoint("/chat")
-            .setAllowedOriginPatterns("https://sage-sunburst-60ba08.netlify.app")
+            .setAllowedOriginPatterns("https://sage-sunburst-60ba08.netlify.app","https://chat-h80l.onrender.com")
             .withSockJS()
     }
 
@@ -68,7 +68,7 @@ class WebSocketConfig : WebSocketMessageBrokerConfigurer {
     @Bean
     fun corsConfigurationSource(): CorsConfigurationSource {
         val config = CorsConfiguration()
-        config.allowedOriginPatterns = listOf("https://sage-sunburst-60ba08.netlify.app") // frontend domeningiz
+        config.allowedOriginPatterns = listOf("https://sage-sunburst-60ba08.netlify.app","https://chat-h80l.onrender.com") // frontend domeningiz
         config.allowedMethods = listOf("GET", "POST", "PUT", "DELETE", "OPTIONS")
         config.allowedHeaders = listOf("*")
         config.allowCredentials = true
