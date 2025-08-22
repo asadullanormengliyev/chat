@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Telegram Login Test</title>
+</head>
+<body>
+<h2>Telegram Login Test</h2>
+
+<!-- Telegram login widget -->
+<script async src="https://telegram.org/js/telegram-widget.js?22"
+        data-telegram-login="Normengliyev_bot"
+        data-size="large"
+        data-onauth="onTelegramAuth(user)"
+        data-request-access="write">
+</script>
+
+<pre id="output"></pre>
+
+<script type="text/javascript">
+    function onTelegramAuth(user) {
+        console.log(user);
+        document.getElementById("output").innerText = JSON.stringify(user, null, 2);
+
+        fetch("https://2a97cdcf4e76.ngrok-free.app/api/v1/auth/login", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                telegramId: user.id,
+                username: user.username,
+                first_name: user.first_name,
+                photo_url: user.photo_url,
+                auth_date: user.auth_date,
+                hash: user.hash
+            })
+
+        }).then(res => res.json())
+            .then(data => console.log("Server response:", data));
+    }
+</script>
+</body>
+</html>

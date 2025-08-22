@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat App</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Axios -->
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+
+    <!-- SockJS -->
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client/dist/sockjs.min.js"></script>
+
+    <!-- STOMPJS -->
+    <script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs/bundles/stomp.umd.min.js"></script>
+</head>
+<body class="bg-gray-100">
+
+<div class="container flex h-screen border rounded overflow-hidden shadow">
+    <!-- Chat List -->
+    <div class="chat-list w-1/3 border-r flex flex-col bg-gray-100">
+        <div class="chat-list-header p-4 font-bold text-lg border-b bg-gray-200">Chatlar</div>
+        <ul class="flex-1 overflow-y-auto p-0 m-0 list-none" id="chat-list"></ul>
+    </div>
+
+    <!-- Chat Window -->
+    <div class="chat-window flex-1 flex flex-col bg-white" id="chat-window" style="display:none;">
+        <div class="chat-header p-4 font-bold text-lg border-b bg-gray-200" id="chat-header"></div>
+        <div class="chat-messages flex-1 p-4 flex flex-col gap-3 overflow-y-auto" id="chat-messages"></div>
+        <div class="chat-input flex p-4 border-t bg-gray-200">
+            <input type="text" id="newMessage" class="flex-1 p-2 rounded-full border mr-2 outline-none" placeholder="Xabar yozing..." />
+            <button id="sendBtn" class="px-4 py-2 rounded-full bg-blue-500 text-white font-bold hover:bg-blue-600">Yuborish</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const users = [];
+    let activeChat = null;
+    let stompClient = null;
+
+    const chatListEl = document.getElementById("chat-list");
+    const chatWindowEl = document.getElementById("chat-window");
+    const chatHeaderEl = document.getElementById("chat-header");
+    const chatMessagesEl = document.getElementById("chat-messages");
+    const newMessageInput = document.getElementById("newMessage");
+    const sendBtn = document.getElementById("sendBtn");
+
+    const CURRENT_USER_ID = 1 // Sizning user idingiz, kerak bo'lsa dynamic qilib olishingiz mumkin
+
+    // Fetch users
+    async function fetchUsers() {
+        try {
+            const res = await axios.get("/api/v1/users/get-all-users-by-username-search");
+            res.data.content.forEach(u => users.push({ ...u, messages: [] }));
+            if (users.length > 0) setActiveChat(users[0]);
+            renderChatList();
+        } catch (err) {
+            console.error(err);
+        }
+    }
+
+    // Render chat list
+    function renderChatList() {
+        chatListEl.innerHTML = "";
+        users.forEach(chat => {
+            const li = document.createElement("li");
+            li.className = `p-3 border-b cursor-pointer ${activeChat && activeChat.id === chat.id ? "bg-gray-300" : "hover:bg-gray-200"}`;
+            li.innerHTML = `<div class="font-bold text-gray-800">${chat.firstName}</div>
+                    <div class="text-gray-600 text-sm">${chat.userName}</div>`;
+            li.addEventListener("click", () => setActiveChat(chat));
+            chatListEl.appendChild(li);
+        });
+    }
+
+    // Set active chat
+    function setActiveChat(chat) {
+        activeChat = chat;
+        chatWindowEl.style.display = "flex";
+        chatHeaderEl.textContent = chat.firstName;
+        renderMessages();
+    }
+
+    // Render messages
+    function renderMessages() {
+        chatMessagesEl.innerHTML = "";
+        if (!activeChat) return;
+        activeChat.messages.forEach(msg => {
+            const div = document.createElement("div");
+            div.className = `p-3 rounded max-w-2/3 ${msg.from === 'me' ? 'self-end bg-blue-500 text-white' : 'self-start bg-gray-300 text-gray-800'}`;
+            div.textContent = msg.text;
+            chatMessagesEl.appendChild(div);
+        });
+        chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+    }
+
+    // Send message
+    function sendMessage() {
+        if (!activeChat || newMessageInput.value.trim() === "") return;
+
+        const msgText = newMessageInput.value;
+
+        // Chatga local qo'shish
+        activeChat.messages.push({ from: "me", text: msgText });
+        renderMessages();
+
+        // WebSocket orqali yuborish
+        if (stompClient && stompClient.connected) {
+            stompClient.publish({
+                destination: "/app/chat.sendMessage",
+                body: JSON.stringify({
+                    chatId: activeChat.id,
+                    senderId: CURRENT_USER_ID,
+                    content: msgText
+                })
+            });
+        } else {
+            console.warn("WebSocket hali ulangan emas!");
+        }
+
+        newMessageInput.value = "";
+    }
+
+    // Connect WebSocket
+    function connectWebSocket() {
+        stompClient = new StompJs.Client({
+            webSocketFactory: () => new SockJS("http://localhost:8080/chat"),
+            debug: str => console.log(str),
+            reconnectDelay: 2000
+        });
+
+        stompClient.onConnect = () => {
+            console.log("WebSocket connected!");
+            // Masalan, sizda chatId = 1 bo‘lsa
+            stompClient.subscribe("/topic/chat.1", msg => {
+                const message = JSON.parse(msg.body);
+
+                // Xabar kelgan userni topamiz
+                const chat = users.find(c => c.id === message.senderId);
+                if (chat) {
+                    chat.messages.push({ from: "him", text: message.content });
+                    if (activeChat && activeChat.id === chat.id) renderMessages();
+                }
+            });
+
+        };
+
+        stompClient.activate();
+    }
+    // Events
+    sendBtn.addEventListener("click", sendMessage);
+    newMessageInput.addEventListener("keyup", e => {
+        if (e.key === "Enter") sendMessage();
+    });
+
+    // Initialize
+    fetchUsers();
+    connectWebSocket();
+</script>
+
+</body>
+</html>
+
+<script src="/webjars/sockjs-client/sockjs.min.js"></script>
+<script src="/webjars/stomp-websocket/stomp.min.js"></script>
