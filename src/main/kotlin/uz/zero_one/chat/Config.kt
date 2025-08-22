@@ -26,6 +26,7 @@ class SecurityConfig(private val jwtAuthenticationFilter: JwtAuthenticationFilte
     @Bean
     fun securityFilterChain(http: HttpSecurity): SecurityFilterChain {
         http
+            .cors { }  // 🔥 qo‘shish kerak
             .csrf { it.disable() }
             .authorizeHttpRequests { auth ->
                 auth
@@ -55,7 +56,7 @@ class WebSocketConfig : WebSocketMessageBrokerConfigurer {
 
     override fun registerStompEndpoints(registry: StompEndpointRegistry) {
         registry.addEndpoint("/chat")
-            .setAllowedOriginPatterns("https://*.ngrok-free.app")
+            .setAllowedOriginPatterns("sage-sunburst-60ba08.netlify.app")
             .withSockJS()
     }
 
@@ -63,6 +64,19 @@ class WebSocketConfig : WebSocketMessageBrokerConfigurer {
         registry.enableSimpleBroker("/topic","/queue")
         registry.setApplicationDestinationPrefixes("/app")
         registry.setUserDestinationPrefix("/user")
+    }
+
+    @Bean
+    fun corsConfigurationSource(): CorsConfigurationSource {
+        val config = CorsConfiguration()
+        config.allowedOriginPatterns = listOf("sage-sunburst-60ba08.netlify.app") // frontend domeningiz
+        config.allowedMethods = listOf("GET", "POST", "PUT", "DELETE", "OPTIONS")
+        config.allowedHeaders = listOf("*")
+        config.allowCredentials = true
+
+        val source = UrlBasedCorsConfigurationSource()
+        source.registerCorsConfiguration("/**", config)
+        return source
     }
 
 }
