@@ -82,9 +82,9 @@ class ChatController(private val chatService: ChatServiceImpl){
     }*/
 
     @MessageMapping("/chat.sendMessage")
-    fun sendMessage(@RequestBody requestDto: MessageRequestDto) {
+    fun sendMessage(requestDto: MessageRequestDto) {
         chatService.sendMessage(requestDto,null)
-        println("keldi")
+        println("Request keldi")
     }
 
     @PostMapping
@@ -101,5 +101,6 @@ class ChatController(private val chatService: ChatServiceImpl){
     fun getChats(): List<ChatUserDto> {
         return chatService.getUserChatsWithMembers()
     }
+
 }
 
