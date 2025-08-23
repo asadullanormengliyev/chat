@@ -2,11 +2,19 @@ package uz.zero_one.chat
 
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.messaging.Message
+import org.springframework.messaging.MessageChannel
+import org.springframework.messaging.simp.config.ChannelRegistration
 import org.springframework.messaging.simp.config.MessageBrokerRegistry
+import org.springframework.messaging.simp.stomp.StompCommand
+import org.springframework.messaging.simp.stomp.StompHeaderAccessor
+import org.springframework.messaging.support.ChannelInterceptor
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
 import org.springframework.security.config.http.SessionCreationPolicy
+import org.springframework.security.core.GrantedAuthority
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.security.web.SecurityFilterChain
@@ -52,7 +60,7 @@ class SecurityConfig(private val jwtAuthenticationFilter: JwtAuthenticationFilte
 
 @Configuration
 @EnableWebSocketMessageBroker
-class WebSocketConfig : WebSocketMessageBrokerConfigurer {
+class WebSocketConfig(private val jwtService: JwtService) : WebSocketMessageBrokerConfigurer {
 
     override fun registerStompEndpoints(registry: StompEndpointRegistry) {
         registry.addEndpoint("/chat")
@@ -78,6 +86,29 @@ class WebSocketConfig : WebSocketMessageBrokerConfigurer {
         source.registerCorsConfiguration("/**", config)
         return source
     }
+
+    override fun configureClientInboundChannel(registration: ChannelRegistration) {
+        registration.interceptors(object : ChannelInterceptor {
+            override fun preSend(
+                message: Message<*>,
+                channel: MessageChannel
+            ):  Message<*>? {
+                val accessor = StompHeaderAccessor.wrap(message)
+                if (StompCommand.CONNECT == accessor.command) {
+                    val token = accessor.getFirstNativeHeader("Authorization")?.removePrefix("Bearer ")
+                    if (token != null) {
+                        val claims = jwtService.accessTokenClaims(token)
+                        val username = claims.subject
+                        val userId = (claims["userId"] as Int).toLong()
+                        val authorities = mutableSetOf<GrantedAuthority>()
+                        accessor.user = UsernamePasswordAuthenticationToken(username, null, authorities)
+                    }
+                }
+                return message
+            }
+        })
+    }
+
 
 }
 
