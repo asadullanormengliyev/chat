@@ -16,7 +16,6 @@ import java.nio.file.StandardCopyOption
 import java.security.MessageDigest
 import java.text.SimpleDateFormat
 import java.util.Date
-import kotlin.text.get
 
 interface UserService {
     fun login(request: TelegramLoginRequestDto): JwtResponseDto
