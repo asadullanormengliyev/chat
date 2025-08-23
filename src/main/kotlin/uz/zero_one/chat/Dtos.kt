@@ -101,3 +101,16 @@ data class AddMembersRequestDto(
 )
 
 
+data class ChatUserDto(
+    val chatId: Long,
+    val chatType: String,
+    val groupName: String?,
+    val members: List<UserDto>
+)
+
+data class UserDto(
+    val id: Long,
+    val firstName: String,
+    val userName: String,
+    val avatarUrl: String?
+)

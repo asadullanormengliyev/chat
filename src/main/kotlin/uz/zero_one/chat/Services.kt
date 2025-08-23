@@ -4,6 +4,9 @@ import jakarta.transaction.Transactional
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.messaging.simp.SimpMessagingTemplate
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
+import org.springframework.security.core.Authentication
+import org.springframework.security.core.GrantedAuthority
 import org.springframework.stereotype.Service
 import org.springframework.web.multipart.MultipartFile
 import java.io.File
@@ -13,6 +16,7 @@ import java.nio.file.StandardCopyOption
 import java.security.MessageDigest
 import java.text.SimpleDateFormat
 import java.util.Date
+import kotlin.text.get
 
 interface UserService {
     fun login(request: TelegramLoginRequestDto): JwtResponseDto
@@ -95,6 +99,14 @@ class UserServiceImpl(
         return users.map { dto -> GetOneUserResponseDto.toResponse(dto) }
     }
 
+    fun getAuthenticationFromToken(token: String): Authentication {
+        val claims = jwtService.accessTokenClaims(token)
+        val username = claims.subject
+        val authorities = emptyList<GrantedAuthority>()
+        val auth = UsernamePasswordAuthenticationToken(username, token, authorities)
+        auth.details = claims["userId"] as Long
+        return auth
+    }
 }
 
 @Service
@@ -172,6 +184,10 @@ class ChatServiceImpl(
             )
         )
 
+        // Shu user sessionda bor yoki yo'qligini tekshirish uchun
+        val sessions = simpleMessagingTemplate.userDestinationPrefix // default: /user
+        println("SimpMessagingTemplate user destination prefix: $sessions")
+
         val response = MessageResponseDto.fromEntity(message)
         println("Response = $response")
         val members = chatMemberRepository.findByChatIdAndDeletedFalse(chat.id!!)
@@ -236,6 +252,27 @@ class ChatServiceImpl(
         }
     }
 
+    fun getUserChatsWithMembers(): List<ChatUserDto> {
+        val userId = getCurrentUserId()
+        val chats = chatMemberRepository.findChatsByUserId(userId)
 
+        return chats.map { chat ->
+            val members = chatMemberRepository.findMembersByChatId(chat.id!!)
+                .map { cm ->
+                    UserDto(
+                        id = cm.user.id!!,
+                        firstName = cm.user.firstName,
+                        userName = cm.user.username,
+                        avatarUrl = cm.user.avatarUrl
+                    )
+                }
+            ChatUserDto(
+                chatId = chat.id!!,
+                chatType = chat.chatType.name,
+                groupName = chat.groupName,
+                members = members
+            )
+        }
+    }
 
 }

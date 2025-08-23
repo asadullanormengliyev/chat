@@ -83,6 +83,17 @@ interface ChatMemberRepository : BaseRepository<ChatMember> {
    fun findByChatIdAndDeletedFalse(id: Long): List<ChatMember>
     fun findByChatIdAndUserId(chatId: Long,userId: Long): ChatMember
     fun existsByChatIdAndUserId(chatId: Long,userId: Long): Boolean
+    @Query("""
+        select cm.chat from ChatMember cm 
+        where cm.user.id = :userId
+    """)
+    fun findChatsByUserId(@Param("userId") userId: Long): List<Chat>
+
+    @Query("""
+        select cm from ChatMember cm 
+        where cm.chat.id = :chatId
+    """)
+    fun findMembersByChatId(@Param("chatId") chatId: Long): List<ChatMember>
 }
 
 @Repository

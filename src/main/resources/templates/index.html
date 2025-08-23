@@ -1,168 +1,173 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>Chat App</title>
-
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-
-    <!-- Axios -->
-    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-
-    <!-- SockJS -->
-    <script src="https://cdn.jsdelivr.net/npm/sockjs-client/dist/sockjs.min.js"></script>
-
-    <!-- STOMPJS -->
-    <script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs/bundles/stomp.umd.min.js"></script>
+    <style>
+        .container { display: flex; height: 100vh; border: 1px solid #ccc; border-radius: 10px; overflow: hidden; font-family: Arial, sans-serif; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); }
+        .chat-list { width: 30%; border-right: 1px solid #ddd; display: flex; flex-direction: column; background: #f7f7f7; }
+        .chat-list-header { padding: 16px; font-weight: bold; font-size: 18px; border-bottom: 1px solid #ddd; background: #eee; }
+        .chat-list ul { list-style: none; padding: 0; margin: 0; overflow-y: auto; flex: 1; }
+        .chat-item { padding: 12px 16px; border-bottom: 1px solid #ddd; cursor: pointer; transition: background 0.2s; }
+        .chat-item:hover { background: #e0e0e0; }
+        .chat-item.active { background: #ccc; }
+        .chat-name { font-weight: bold; color: #333; }
+        .chat-last { font-size: 14px; color: #666; margin-top: 4px; }
+        .chat-window { flex: 1; display: flex; flex-direction: column; background: #fff; }
+        .chat-header { padding: 16px; font-weight: bold; font-size: 18px; border-bottom: 1px solid #ddd; background: #f2f2f2; color: #333; }
+        .chat-messages { flex: 1; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; background: #fff; }
+        .message { max-width: 60%; padding: 10px 16px; border-radius: 20px; word-wrap: break-word; }
+        .message.me { align-self: flex-end; background: #3b82f6; color: white; }
+        .message.him { align-self: flex-start; background: #e5e5e5; color: #333; }
+        .chat-input { display: flex; padding: 16px; border-top: 1px solid #ddd; background: #f2f2f2; }
+        .chat-input input { flex: 1; padding: 10px 16px; border-radius: 25px; border: 1px solid #ccc; outline: none; margin-right: 8px; font-size: 14px; }
+        .chat-input input:focus { border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59,130,246,0.3); }
+        .chat-input button { padding: 10px 20px; border-radius: 25px; background: #3b82f6; color: white; border: none; cursor: pointer; font-weight: bold; }
+        .chat-input button:hover { background: #2563eb; }
+    </style>
 </head>
-<body class="bg-gray-100">
-
-<div class="container flex h-screen border rounded overflow-hidden shadow">
-    <!-- Chat List -->
-    <div class="chat-list w-1/3 border-r flex flex-col bg-gray-100">
-        <div class="chat-list-header p-4 font-bold text-lg border-b bg-gray-200">Chatlar</div>
-        <ul class="flex-1 overflow-y-auto p-0 m-0 list-none" id="chat-list"></ul>
+<body>
+<div class="container">
+    <!-- Chat list -->
+    <div class="chat-list">
+        <div class="chat-list-header">Chatlar</div>
+        <ul id="chatList"></ul>
     </div>
 
-    <!-- Chat Window -->
-    <div class="chat-window flex-1 flex flex-col bg-white" id="chat-window" style="display:none;">
-        <div class="chat-header p-4 font-bold text-lg border-b bg-gray-200" id="chat-header"></div>
-        <div class="chat-messages flex-1 p-4 flex flex-col gap-3 overflow-y-auto" id="chat-messages"></div>
-        <div class="chat-input flex p-4 border-t bg-gray-200">
-            <input type="text" id="newMessage" class="flex-1 p-2 rounded-full border mr-2 outline-none" placeholder="Xabar yozing..." />
-            <button id="sendBtn" class="px-4 py-2 rounded-full bg-blue-500 text-white font-bold hover:bg-blue-600">Yuborish</button>
+    <!-- Chat window -->
+    <div class="chat-window" id="chatWindow" style="display:none;">
+        <div class="chat-header" id="chatHeader"></div>
+        <div class="chat-messages" id="chatMessages"></div>
+        <div class="chat-input">
+            <input id="messageInput" placeholder="Xabar yozing..." />
+            <button id="sendBtn">Yuborish</button>
         </div>
     </div>
 </div>
 
+<!-- CDN Libraries -->
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+ <script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@7.0.0/dist/stomp.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/stompjs/lib/stomp.min.js"></script>
+
 <script>
-    const users = [];
+    const token = localStorage.getItem("accessToken");
+    let users = [];
     let activeChat = null;
+    let chatInfo = null;
     let stompClient = null;
 
-    const chatListEl = document.getElementById("chat-list");
-    const chatWindowEl = document.getElementById("chat-window");
-    const chatHeaderEl = document.getElementById("chat-header");
-    const chatMessagesEl = document.getElementById("chat-messages");
-    const newMessageInput = document.getElementById("newMessage");
+    const chatList = document.getElementById("chatList");
+    const chatWindow = document.getElementById("chatWindow");
+    const chatHeader = document.getElementById("chatHeader");
+    const chatMessages = document.getElementById("chatMessages");
+    const messageInput = document.getElementById("messageInput");
     const sendBtn = document.getElementById("sendBtn");
 
-    // Fetch users
+    // Userlarni olish
     async function fetchUsers() {
         try {
-            const res = await axios.get("/api/v1/users/get-all-users-by-username-search");
-            res.data.content.forEach(u => users.push({ ...u, messages: [] }));
-            if (users.length > 0) setActiveChat(users[0]);
+            const res = await axios.get("/api/v1/users/get-all-users-by-username-search", {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            users = res.data.content.map(u => ({ ...u, messages: [] }));
             renderChatList();
         } catch (err) {
-            console.error(err);
+            console.error("Users error:", err);
         }
     }
 
-    // Render chat list
+    // Chat list render
     function renderChatList() {
-        chatListEl.innerHTML = "";
-        users.forEach(chat => {
+        chatList.innerHTML = "";
+        users.forEach(user => {
             const li = document.createElement("li");
-            li.className = `p-3 border-b cursor-pointer ${activeChat && activeChat.id === chat.id ? "bg-gray-300" : "hover:bg-gray-200"}`;
-            li.innerHTML = `<div class="font-bold text-gray-800">${chat.firstName}</div>
-                            <div class="text-gray-600 text-sm">${chat.userName}</div>`;
-            li.addEventListener("click", () => setActiveChat(chat));
-            chatListEl.appendChild(li);
+            li.className = "chat-item";
+            li.innerHTML = `<div class="chat-name">${user.firstName}</div><div class="chat-last">${user.userName}</div>`;
+            li.onclick = () => openChat(user, li);
+            chatList.appendChild(li);
         });
     }
 
-    // Set active chat
-    function setActiveChat(chat) {
-        activeChat = chat;
-        chatWindowEl.style.display = "flex";
-        chatHeaderEl.textContent = chat.firstName;
+    // Chat ochish
+    function openChat(user, li) {
+        activeChat = user;
+        document.querySelectorAll(".chat-item").forEach(item => item.classList.remove("active"));
+        li.classList.add("active");
+
+        chatWindow.style.display = "flex";
+        chatHeader.textContent = user.firstName;
         renderMessages();
     }
 
-    // Render messages
-    function renderMessages() {
-        chatMessagesEl.innerHTML = "";
-        if (!activeChat) return;
-        activeChat.messages.forEach(msg => {
-            const div = document.createElement("div");
-            div.className = `p-3 rounded max-w-2/3 ${msg.from === 'me' ? 'self-end bg-blue-500 text-white' : 'self-start bg-gray-300 text-gray-800'}`;
-            div.textContent = msg.text;
-            chatMessagesEl.appendChild(div);
-        });
-        chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
-    }
-
-    // Send message
+    // Xabar yuborish
     function sendMessage() {
-        if (!activeChat || newMessageInput.value.trim() === "") return;
+        if (!activeChat || !messageInput.value.trim() || !stompClient) return;
 
-        const msgText = newMessageInput.value;
-
-        // Chatga local qo'shish
-        activeChat.messages.push({ from: "me", text: msgText });
+        const text = messageInput.value;
+        activeChat.messages.push({ from: "me", text });
         renderMessages();
 
-        // JWT tokenni header bilan yuborish
-        if (stompClient && stompClient.connected) {
-            const token = localStorage.getItem("accessToken");
-            stompClient.publish({
-                destination: "/app/chat.sendMessage",
-                headers: {
-                    Authorization: `Bearer ${token}`
-                },
-                body: JSON.stringify({
-                    chatId: activeChat.id,
-                    content: msgText
-                })
-            });
-        } else {
-            console.warn("WebSocket hali ulangan emas!");
-        }
+        stompClient.send(
+            "/app/chat.sendMessage",
+            { Authorization: `Bearer ${token}` },
+            JSON.stringify({ chatId: activeChat.id, content: text })
+        );
 
-        newMessageInput.value = "";
+        messageInput.value = "";
     }
 
-    // Connect WebSocket
-    function connectWebSocket() {
-        const token = localStorage.getItem("accessToken"); // JWT token
-
-        stompClient = new StompJs.Client({
-            webSocketFactory: () => new SockJS("/chat"),
-            connectHeaders: {
-                Authorization: `Bearer ${token}`
-            },
-            debug: str => console.log(str),
-            reconnectDelay: 2000
+    // UI ga xabarlarni chizish
+    function renderMessages() {
+        chatMessages.innerHTML = "";
+        activeChat.messages.forEach((msg) => {
+            const div = document.createElement("div");
+            div.className = `message ${msg.from}`;
+            div.textContent = msg.text;
+            chatMessages.appendChild(div);
         });
-
-        stompClient.onConnect = () => {
-            console.log("WebSocket connected!");
-            stompClient.subscribe("/user/queue/messages", msg => {
-                const message = JSON.parse(msg.body);
-                const chat = users.find(c => c.id === message.chatId);
-                if (chat) {
-                    chat.messages.push({ from: "him", text: message.content });
-                    if (activeChat && activeChat.id === chat.id) renderMessages();
-                }
-            });
-        };
-
-        stompClient.activate();
+        chatMessages.scrollTop = chatMessages.scrollHeight;
     }
 
-    // Events
-    sendBtn.addEventListener("click", sendMessage);
-    newMessageInput.addEventListener("keyup", e => {
-        if (e.key === "Enter") sendMessage();
-    });
+    // WebSocket ulash
+    function connectWebSocket() {
+        const socket = new SockJS("https://233f5eabced5.ngrok-free.app/chat");
+        stompClient = Stomp.over(socket);
 
-    // Initialize
+        // Debug logni o'chirish uchun:
+        stompClient.debug = null;
+
+        stompClient.connect(
+            { Authorization: `Bearer ${token}` }, // headers
+            function(frame) {
+                console.log("WebSocket connected!", frame);
+
+                // Serverdan xabar olish
+                stompClient.subscribe("/user/queue/messages", function(msg) {
+                    const message = JSON.parse(msg.body);
+                    console.log("Kelgan:", message);
+
+                    const chat = users.find(c => c.id === message.chatId);
+                    if (chat) {
+                        chat.messages.push({ from: "him", text: message.content });
+                        if (activeChat && activeChat.id === chat.id) renderMessages();
+                    }
+                });
+            },
+            function(error) {
+                console.error("WebSocket connection error:", error);
+            }
+        );
+    }
+
+    sendBtn.onclick = sendMessage;
+    messageInput.addEventListener("keyup", (e) => { if (e.key === "Enter") sendMessage(); });
+
+    // Boshlash
     fetchUsers();
     connectWebSocket();
 </script>
-
 </body>
 </html>

@@ -26,7 +26,7 @@ class JwtAuthenticationFilter(private val jwtService: JwtService, ): OncePerRequ
             return
         }
         val token = authorization.substring(7)
-
+        println("Token = ${token}")
         jwtService.validateAccessToken(token)
         val claims = jwtService.accessTokenClaims(token)
         val username = claims.subject

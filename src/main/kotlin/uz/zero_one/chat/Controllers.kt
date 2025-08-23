@@ -97,5 +97,9 @@ class ChatController(private val chatService: ChatServiceImpl){
         chatService.addMembers(chatId,requestDto)
     }
 
+    @GetMapping("/users")
+    fun getChats(): List<ChatUserDto> {
+        return chatService.getUserChatsWithMembers()
+    }
 }
 
