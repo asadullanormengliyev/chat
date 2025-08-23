@@ -49,8 +49,6 @@
     const newMessageInput = document.getElementById("newMessage");
     const sendBtn = document.getElementById("sendBtn");
 
-    const CURRENT_USER_ID = 1 // Sizning user idingiz, kerak bo'lsa dynamic qilib olishingiz mumkin
-
     // Fetch users
     async function fetchUsers() {
         try {
@@ -70,7 +68,7 @@
             const li = document.createElement("li");
             li.className = `p-3 border-b cursor-pointer ${activeChat && activeChat.id === chat.id ? "bg-gray-300" : "hover:bg-gray-200"}`;
             li.innerHTML = `<div class="font-bold text-gray-800">${chat.firstName}</div>
-                    <div class="text-gray-600 text-sm">${chat.userName}</div>`;
+                            <div class="text-gray-600 text-sm">${chat.userName}</div>`;
             li.addEventListener("click", () => setActiveChat(chat));
             chatListEl.appendChild(li);
         });
@@ -107,13 +105,16 @@
         activeChat.messages.push({ from: "me", text: msgText });
         renderMessages();
 
-        // WebSocket orqali yuborish
+        // JWT tokenni header bilan yuborish
         if (stompClient && stompClient.connected) {
+            const token = localStorage.getItem("accessToken");
             stompClient.publish({
                 destination: "/app/chat.sendMessage",
+                headers: {
+                    Authorization: `Bearer ${token}`
+                },
                 body: JSON.stringify({
                     chatId: activeChat.id,
-                    senderId: CURRENT_USER_ID,
                     content: msgText
                 })
             });
@@ -126,30 +127,32 @@
 
     // Connect WebSocket
     function connectWebSocket() {
+        const token = localStorage.getItem("accessToken"); // JWT token
+
         stompClient = new StompJs.Client({
-            webSocketFactory: () => new SockJS("http://localhost:8080/chat"),
+            webSocketFactory: () => new SockJS("/chat"),
+            connectHeaders: {
+                Authorization: `Bearer ${token}`
+            },
             debug: str => console.log(str),
             reconnectDelay: 2000
         });
 
         stompClient.onConnect = () => {
             console.log("WebSocket connected!");
-            // Masalan, sizda chatId = 1 bo‘lsa
-            stompClient.subscribe("/topic/chat.1", msg => {
+            stompClient.subscribe("/user/queue/messages", msg => {
                 const message = JSON.parse(msg.body);
-
-                // Xabar kelgan userni topamiz
-                const chat = users.find(c => c.id === message.senderId);
+                const chat = users.find(c => c.id === message.chatId);
                 if (chat) {
                     chat.messages.push({ from: "him", text: message.content });
                     if (activeChat && activeChat.id === chat.id) renderMessages();
                 }
             });
-
         };
 
         stompClient.activate();
     }
+
     // Events
     sendBtn.addEventListener("click", sendMessage);
     newMessageInput.addEventListener("keyup", e => {
@@ -163,6 +166,3 @@
 
 </body>
 </html>
-
-<script src="/webjars/sockjs-client/sockjs.min.js"></script>
-<script src="/webjars/stomp-websocket/stomp.min.js"></script>

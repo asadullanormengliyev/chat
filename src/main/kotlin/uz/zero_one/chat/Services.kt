@@ -138,7 +138,8 @@ class ChatServiceImpl(
         val sender = userRepository.findByIdAndDeletedFalse(senderId) ?: throw UserNotFoundException(
             senderId
         )
-
+        println("ChatId = ${chat.id}")
+        println("Yuboruvchi = ${sender.username}")
         var fileUrl: String? = null
         var fileHash: String? = null
         if (file != null) {
@@ -172,9 +173,13 @@ class ChatServiceImpl(
         )
 
         val response = MessageResponseDto.fromEntity(message)
+        println("Response = $response")
         val members = chatMemberRepository.findByChatIdAndDeletedFalse(chat.id!!)
+        members.forEach { member -> println("Memeberlar = $member") }
         members.forEach { member ->
+            println("memeber ${member.user.username}")
             if (member.user.id != sender.id) {
+                println("Qabul qiluvchi ${member.user.username}")
                 simpleMessagingTemplate.convertAndSendToUser(
                     member.user.username,
                     "/queue/messages",

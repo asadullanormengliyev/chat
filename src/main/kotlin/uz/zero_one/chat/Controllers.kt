@@ -4,6 +4,7 @@ import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.messaging.handler.annotation.MessageMapping
 import org.springframework.stereotype.Controller
+import org.springframework.web.bind.annotation.CrossOrigin
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
@@ -19,7 +20,7 @@ import org.springframework.web.multipart.MultipartFile
 
 @RestController
 @RequestMapping("/api/v1/auth")
-/*@CrossOrigin(origins = ["*"])*/
+//@CrossOrigin(origins = ["*"])
 class AuthController(private val userService: UserService) {
 
     @PostMapping("/login")
@@ -83,6 +84,7 @@ class ChatController(private val chatService: ChatServiceImpl){
     @MessageMapping("/chat.sendMessage")
     fun sendMessage(@RequestBody requestDto: MessageRequestDto) {
         chatService.sendMessage(requestDto,null)
+        println("keldi")
     }
 
     @PostMapping
