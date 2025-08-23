@@ -26,7 +26,7 @@ interface UserService {
 
 interface ChatService {
     fun createPrivateChat(userId: Long): GetOneChatResponseDto
-    fun sendMessage(messageDto: MessageRequestDto, file: MultipartFile?)
+    fun sendMessage(messageDto: MessageRequestDto,username: String, file: MultipartFile?)
     fun createPublicChat(groupName: String,file: MultipartFile?): GetOneChatResponseDto
     fun addMembers(chatId: Long,requestDto: AddMembersRequestDto)
 }
@@ -148,12 +148,10 @@ class ChatServiceImpl(
     }
 
     @Transactional
-    override fun sendMessage(messageDto: MessageRequestDto, file: MultipartFile?) {
-        val senderId = getCurrentUserId()
+    override fun sendMessage(messageDto: MessageRequestDto, username: String, file: MultipartFile?) {
         val chat = chatRepository.findByIdAndDeletedFalse(messageDto.chatId) ?: throw ChatNotFoundException(messageDto.chatId)
-        val sender = userRepository.findByIdAndDeletedFalse(senderId) ?: throw UserNotFoundException(
-            senderId
-        )
+        println("AAAAAAAAAA")
+        val sender = userRepository.findByUsernameAndDeletedFalse(username) ?: throw UserNotFoundException(-1)
         println("ChatId = ${chat.id}")
         println("Yuboruvchi = ${sender.username}")
         var fileUrl: String? = null

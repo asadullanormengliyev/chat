@@ -60,6 +60,8 @@ interface UserRepository : BaseRepository<User> {
         @Param("search") search: String?,
         pageable: Pageable
     ): Page<User>
+
+    fun findByUsernameAndDeletedFalse(username: String): User?
 }
 
 @Repository

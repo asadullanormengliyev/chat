@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RequestPart
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.multipart.MultipartFile
+import java.security.Principal
 
 
 @RestController
@@ -82,9 +83,10 @@ class ChatController(private val chatService: ChatServiceImpl){
     }*/
 
     @MessageMapping("/chat.sendMessage")
-    fun sendMessage(requestDto: MessageRequestDto) {
-        chatService.sendMessage(requestDto,null)
-        println("Request keldi")
+    fun sendMessage(requestDto: MessageRequestDto,principal: Principal) {
+        val username = principal.name
+        println("Request messagega keldi = $username")
+        chatService.sendMessage(requestDto,username,null)
     }
 
     @PostMapping
