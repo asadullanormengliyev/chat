@@ -94,20 +94,33 @@ class WebSocketConfig(private val userServiceImpl: UserServiceImpl) : WebSocketM
         registration.interceptors(object : ChannelInterceptor {
             override fun preSend(message: Message<*>, channel: MessageChannel): Message<*> {
                 val accessor = MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor::class.java)
-                println("STOMP COMMAND = ${accessor?.command}, headers = ${accessor}")
-                println(">>> COMMAND = ${accessor?.command}")
-                println(">>> HEADERS = ${accessor?.toNativeHeaderMap()}")
+
                 if (StompCommand.CONNECT == accessor?.command) {
-                    val token = accessor.getFirstNativeHeader("Authorization")?.removePrefix("Bearer ")
+                    // 1️⃣ Headerni to‘g‘ri o‘qish
+                    val raw = accessor.getFirstNativeHeader("Authorization")
+                    val token = raw?.removePrefix("Bearer ")?.trim()
+
+                    // 2️⃣ Token bo‘lsa tekshir
                     if (!token.isNullOrBlank()) {
-                        val auth = userServiceImpl.getAuthenticationFromToken(token)
-                        SecurityContextHolder.getContext().authentication = auth
+                        try {
+                            val auth = userServiceImpl.getAuthenticationFromToken(token)
+                            // muhim joy – STOMP session foydalanuvchisini bog‘lash
+                            accessor.user = auth
+                            SecurityContextHolder.getContext().authentication = auth
+                            println("✅ STOMP CONNECT token tekshirildi: ${auth.name}")
+                        } catch (ex: Exception) {
+                            println("❌ Token valid emas: ${ex.message}")
+                        }
+                    } else {
+                        println("⚠️ Token yo‘q CONNECT headerda")
                     }
                 }
+
                 return message
             }
         })
     }
+
 
 }
 
