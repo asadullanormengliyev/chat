@@ -78,6 +78,7 @@ class SecurityConfig(private val jwtAuthenticationFilter: JwtAuthenticationFilte
 class WebSocketConfig(private val userServiceImpl: UserServiceImpl) : WebSocketMessageBrokerConfigurer {
 
     override fun registerStompEndpoints(registry: StompEndpointRegistry) {
+        println("Front /chatga keldi")
         registry.addEndpoint("/chat")
             .setAllowedOriginPatterns("https://sage-sunburst-60ba08.netlify.app","https://chat-h80l.onrender.com")
              .withSockJS()
@@ -93,6 +94,9 @@ class WebSocketConfig(private val userServiceImpl: UserServiceImpl) : WebSocketM
         registration.interceptors(object : ChannelInterceptor {
             override fun preSend(message: Message<*>, channel: MessageChannel): Message<*> {
                 val accessor = MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor::class.java)
+                println("STOMP COMMAND = ${accessor?.command}, headers = ${accessor}")
+                println(">>> COMMAND = ${accessor?.command}")
+                println(">>> HEADERS = ${accessor?.toNativeHeaderMap()}")
                 if (StompCommand.CONNECT == accessor?.command) {
                     val token = accessor.getFirstNativeHeader("Authorization")?.removePrefix("Bearer ")
                     if (!token.isNullOrBlank()) {
