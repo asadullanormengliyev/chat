@@ -104,6 +104,7 @@ class WebSocketConfig(private val userServiceImpl: UserServiceImpl) : WebSocketM
                     if (!token.isNullOrBlank()) {
                         try {
                             val auth = userServiceImpl.getAuthenticationFromToken(token)
+                            println("AUTH ==== ${auth.name}")
                             // muhim joy – STOMP session foydalanuvchisini bog‘lash
                             accessor.user = auth
                             SecurityContextHolder.getContext().authentication = auth

@@ -102,10 +102,15 @@ class UserServiceImpl(
         val claims = jwtService.accessTokenClaims(token)
         val username = claims.subject
         val authorities = emptyList<GrantedAuthority>()
+        println("getAuthenticationFromToken!!!!!")
         val auth = UsernamePasswordAuthenticationToken(username, token, authorities)
-        auth.details = claims["userId"] as Long
+
+        // Integer yoki Long bo‘lishidan qat’i nazar, Number sifatida olib Long qilib olish
+        auth.details = (claims["userId"] as Number).toLong()
+
         return auth
     }
+
 }
 
 @Service
