@@ -10,12 +10,10 @@ import org.springframework.messaging.simp.stomp.StompCommand
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor
 import org.springframework.messaging.support.ChannelInterceptor
 import org.springframework.messaging.support.MessageHeaderAccessor
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
 import org.springframework.security.config.http.SessionCreationPolicy
-import org.springframework.security.core.GrantedAuthority
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
 import org.springframework.security.crypto.password.PasswordEncoder
@@ -24,7 +22,6 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration
 import org.springframework.web.cors.CorsConfigurationSource
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource
-import org.springframework.web.servlet.config.annotation.CorsRegistry
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer
@@ -62,7 +59,7 @@ class SecurityConfig(private val jwtAuthenticationFilter: JwtAuthenticationFilte
     @Bean
     fun corsConfigurationSource(): CorsConfigurationSource {
         val configuration = CorsConfiguration()
-        configuration.allowedOrigins = listOf("https://sage-sunburst-60ba08.netlify.app","https://chat-h80l.onrender.com")
+        configuration.allowedOrigins = listOf("https://sage-sunburst-60ba08.netlify.app","https://chat-h80l.onrender.com","https://ad736f716e1e.ngrok-free.app")
         configuration.allowedMethods = listOf("GET", "POST", "PUT", "DELETE", "OPTIONS")
         configuration.allowedHeaders = listOf("*")
         configuration.allowCredentials = true
@@ -78,9 +75,8 @@ class SecurityConfig(private val jwtAuthenticationFilter: JwtAuthenticationFilte
 class WebSocketConfig(private val userServiceImpl: UserServiceImpl) : WebSocketMessageBrokerConfigurer {
 
     override fun registerStompEndpoints(registry: StompEndpointRegistry) {
-        println("Front /chatga keldi")
         registry.addEndpoint("/chat")
-            .setAllowedOriginPatterns("https://sage-sunburst-60ba08.netlify.app","https://chat-h80l.onrender.com")
+            .setAllowedOriginPatterns("https://sage-sunburst-60ba08.netlify.app","https://chat-h80l.onrender.com","https://ad736f716e1e.ngrok-free.app")
              .withSockJS()
     }
 
@@ -100,7 +96,6 @@ class WebSocketConfig(private val userServiceImpl: UserServiceImpl) : WebSocketM
                     val raw = accessor.getFirstNativeHeader("Authorization")
                     val token = raw?.removePrefix("Bearer ")?.trim()
 
-                    // 2️⃣ Token bo‘lsa tekshir
                     if (!token.isNullOrBlank()) {
                         try {
                             val auth = userServiceImpl.getAuthenticationFromToken(token)

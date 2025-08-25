@@ -7,6 +7,7 @@ import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.domain.Specification
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor
+import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.jpa.repository.support.JpaEntityInformation
 import org.springframework.data.jpa.repository.support.SimpleJpaRepository
@@ -14,6 +15,7 @@ import org.springframework.data.repository.NoRepositoryBean
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.data.repository.query.Param
 import org.springframework.stereotype.Repository
+import java.util.Date
 
 @NoRepositoryBean
 interface BaseRepository<T : BaseEntity> : JpaRepository<T, Long>, JpaSpecificationExecutor<T> {
@@ -76,8 +78,6 @@ interface ChatRepository : BaseRepository<Chat> {
                 """
     )
     fun findPrivateChat(userId: Long, currentUserId: Long): Chat?
-
-
 }
 
 @Repository
@@ -101,9 +101,26 @@ interface ChatMemberRepository : BaseRepository<ChatMember> {
 @Repository
 interface MessageRepository : BaseRepository<Message> {
 
+    @Query("""select m from Message m where m.chat.id =:chatId and m.chat.deleted = false 
+        and m.deleted = false order by m.createdDate desc """)
+    fun getAllMessage(@Param("chatId") chatId: Long,pageable: Pageable): Page<Message>
 }
 
 @Repository
 interface MessageStatusRepository : BaseRepository<MessageStatus> {
+    @Query("select count(ms) from MessageStatus ms where ms.user.id = :userId and ms.isRead = false and ms.message.deleted = false and ms.deleted = false and ms.message.chat.id =:chatId")
+    fun countUnreadMessages(@Param("userId") userId: Long,@Param("chatId") chatId: Long): Long
+
+    @Modifying
+    @Query("""
+    update MessageStatus ms set ms.isRead = true, ms.readAt = :readAt where ms.user.id = :userId 
+      and ms.message.chat.id = :chatId and ms.message.id in :messageIds
+""")
+    fun markAsReadMessage(
+        @Param("userId") userId: Long,
+        @Param("chatId") chatId: Long,
+        @Param("messageIds") messageIds: List<Long>,
+        @Param("readAt") readAt: Date
+    )
 
 }

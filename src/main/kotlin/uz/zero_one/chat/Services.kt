@@ -1,20 +1,28 @@
 package uz.zero_one.chat
 
 import jakarta.transaction.Transactional
+import org.springframework.context.ApplicationListener
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
+import org.springframework.data.repository.findByIdOrNull
 import org.springframework.messaging.simp.SimpMessagingTemplate
+import org.springframework.messaging.simp.stomp.StompHeaderAccessor
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
 import org.springframework.security.core.Authentication
 import org.springframework.security.core.GrantedAuthority
+import org.springframework.stereotype.Component
 import org.springframework.stereotype.Service
 import org.springframework.web.multipart.MultipartFile
+import org.springframework.web.socket.messaging.AbstractSubProtocolEvent
+import org.springframework.web.socket.messaging.SessionConnectEvent
+import org.springframework.web.socket.messaging.SessionDisconnectEvent
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.nio.file.StandardCopyOption
 import java.security.MessageDigest
 import java.text.SimpleDateFormat
+import java.time.LocalDateTime
 import java.util.Date
 
 interface UserService {
@@ -22,13 +30,19 @@ interface UserService {
     fun updateUser(id: Long, request: UserUpdateRequestDto, file: MultipartFile?)
     fun deleteUser(id: Long)
     fun getAllUsersByUsernameSearch(search: String?, pageable: Pageable): Page<GetOneUserResponseDto>
+    fun getUserStatus(id: Long): UserStatusDto
 }
 
 interface ChatService {
     fun createPrivateChat(userId: Long): GetOneChatResponseDto
-    fun sendMessage(messageDto: MessageRequestDto,username: String, file: MultipartFile?)
+    fun sendMessage(messageDto: MessageRequestDto,username: String)
     fun createPublicChat(groupName: String,file: MultipartFile?): GetOneChatResponseDto
     fun addMembers(chatId: Long,requestDto: AddMembersRequestDto)
+    fun saveFile(file: MultipartFile): FileUploadResponseDto
+    fun markMessagesAsRead(dto: ReadMessageRequestDto, username: String)
+    fun getAllMessage(chatId: Long,pageable: Pageable): Page<MessageResponseDto>
+    fun editMessage(chatId: Long, messageId: Long, newContent: String?, username: String): MessageResponseDto
+    fun getAllChat(pageable: Pageable): Page<GetOneChatResponseDto>
 }
 
 @Service
@@ -57,7 +71,6 @@ class UserServiceImpl(
 
         val accessToken = jwtService.generateAccessToken(user)
         val refreshToken = jwtService.generateRefreshToken(user)
-        println("AccessToken = $accessToken")
         return JwtResponseDto(accessToken, refreshToken)
     }
 
@@ -98,16 +111,18 @@ class UserServiceImpl(
         return users.map { dto -> GetOneUserResponseDto.toResponse(dto) }
     }
 
+    override fun getUserStatus(id: Long): UserStatusDto {
+        val user = userRepository.findByIdAndDeletedFalse(id) ?: throw UserNotFoundException(id)
+        return UserStatusDto(user.status,user.lastSeen)
+    }
+
     fun getAuthenticationFromToken(token: String): Authentication {
         val claims = jwtService.accessTokenClaims(token)
         val username = claims.subject
         val authorities = emptyList<GrantedAuthority>()
         println("getAuthenticationFromToken!!!!!")
         val auth = UsernamePasswordAuthenticationToken(username, token, authorities)
-
-        // Integer yoki Long bo‘lishidan qat’i nazar, Number sifatida olib Long qilib olish
         auth.details = (claims["userId"] as Number).toLong()
-
         return auth
     }
 
@@ -119,15 +134,15 @@ class ChatServiceImpl(
     private val chatMemberRepository: ChatMemberRepository,
     private val userRepository: UserRepository,
     private val messageRepository: MessageRepository,
-    private val simpleMessagingTemplate: SimpMessagingTemplate
+    private val simpleMessagingTemplate: SimpMessagingTemplate,
+    private val messageStatusRepository: MessageStatusRepository
 ) : ChatService {
 
     @Transactional
     override fun createPrivateChat(userId: Long): GetOneChatResponseDto {
         val currentUserId = getCurrentUserId()
         val user = userRepository.findByIdAndDeletedFalse(userId) ?: throw UserNotFoundException(userId)
-        val currentUser =
-            userRepository.findByIdAndDeletedFalse(currentUserId) ?: throw UserNotFoundException(currentUserId)
+        val currentUser = userRepository.findByIdAndDeletedFalse(currentUserId) ?: throw UserNotFoundException(currentUserId)
 
         val existing = chatRepository.findPrivateChat(user.id!!, currentUserId)
         if (existing != null) return GetOneChatResponseDto.toResponse(existing)
@@ -143,66 +158,73 @@ class ChatServiceImpl(
 
         chatMemberRepository.save(ChatMember(chat = chat, user = user))
         chatMemberRepository.save(ChatMember(chat = chat, user = currentUser))
-
         return GetOneChatResponseDto.toResponse(chat)
     }
 
     @Transactional
-    override fun sendMessage(messageDto: MessageRequestDto, username: String, file: MultipartFile?) {
+    override fun sendMessage(messageDto: MessageRequestDto, username: String) {
         val chat = chatRepository.findByIdAndDeletedFalse(messageDto.chatId) ?: throw ChatNotFoundException(messageDto.chatId)
-        println("AAAAAAAAAA")
-        val sender = userRepository.findByUsernameAndDeletedFalse(username) ?: throw UserNotFoundException(-1)
-        println("ChatId = ${chat.id}")
-        println("Yuboruvchi = ${sender.username}")
-        var fileUrl: String? = null
-        var fileHash: String? = null
-        if (file != null) {
-            val timestamp = SimpleDateFormat("yyyy-MM-dd_HH-mm-ss").format(Date())
-            val extension = file.originalFilename?.substringAfterLast(".")?.lowercase()
-            val newFileName = "${timestamp}.${extension}"
-            val uploadPath = Paths.get("uploads")
-            val savedFile = uploadPath.resolve(newFileName)
-            Files.createDirectories(uploadPath)
-            Files.copy(
-                file.inputStream,
-                savedFile,
-                StandardCopyOption.REPLACE_EXISTING
-            )
-            val bytes = Files.readAllBytes(savedFile)
-            val digest = MessageDigest.getInstance("SHA-256")
-            val hash = digest.digest(bytes).joinToString("") { "%02x".format(it) }
-            fileUrl ="/uploads/$newFileName"
-            fileHash = hash
-        }
+        val sender = userRepository.findByUsernameAndDeletedFalse(username) ?: throw UsernameNotFoundException(username)
+        val replyMessage = messageDto.replyToId?.let { messageRepository.findByIdOrNull(it) }
 
         val message = messageRepository.save(
             Message(
                 chat = chat,
                 sender = sender,
+                messageType = messageDto.messageType,
                 content = messageDto.content,
-                fileUrl = fileUrl,
-                fileHash = fileHash,
-                replyTo = null
+                fileUrl = messageDto.fileUrl,
+                fileHash = messageDto.fileHash,
+                latitude = messageDto.latitude,
+                longitude = messageDto.longitude,
+                replyTo = replyMessage
             )
         )
 
-        // Shu user sessionda bor yoki yo'qligini tekshirish uchun
-        val sessions = simpleMessagingTemplate.userDestinationPrefix // default: /user
-        println("SimpMessagingTemplate user destination prefix: $sessions")
-
-        val response = MessageResponseDto.fromEntity(message)
-        println("Response = $response")
         val members = chatMemberRepository.findByChatIdAndDeletedFalse(chat.id!!)
-        members.forEach { member -> println("Memeberlar = $member") }
+        val now = LocalDateTime.now()
         members.forEach { member ->
-            println("memeber ${member.user.username}")
-            if (member.user.id != sender.id) {
-                println("Qabul qiluvchi ${member.user.username}")
+            member.lastMessageAt = now
+            chatMemberRepository.save(member)
+        }
+        members.filter { it.user.id != sender.id }.forEach { member ->
+            messageStatusRepository.save(
+                MessageStatus(
+                    message = message,
+                    user = member.user,
+                    isRead = false,
+                    readAt = null
+                )
+            )
+        }
+
+        val response = MessageResponseDto.toResponse(message)
+        if (chat.chatType == ChatType.GROUP){
+            simpleMessagingTemplate.convertAndSend("/topic/chat.${chat.id}", response)
+            members.filter { it.user.id != sender.id }.forEach { member ->
+                val unreadCount = messageStatusRepository.countUnreadMessages(member.user.id!!, chat.id!!)
                 simpleMessagingTemplate.convertAndSendToUser(
                     member.user.username,
-                    "/queue/messages",
-                    response
+                    "/queue/chat-list",
+                    ChatListItemDto.from(chat, message, unreadCount)
                 )
+            }
+        }else{
+            members.forEach { member ->
+                if (member.user.id != sender.id) {
+                    println("Qabul qiluvchi ${member.user.username}")
+                    simpleMessagingTemplate.convertAndSendToUser(
+                        member.user.username,
+                        "/queue/messages",
+                        response
+                    )
+                    val unreadCount = messageStatusRepository.countUnreadMessages(member.user.id!!,chat.id!!)
+                    simpleMessagingTemplate.convertAndSendToUser(
+                        member.user.username,
+                        "/queue/chat-list",
+                        ChatListItemDto.from(chat, message, unreadCount)
+                    )
+                }
             }
         }
     }
@@ -254,6 +276,64 @@ class ChatServiceImpl(
         }
     }
 
+    override fun saveFile(file: MultipartFile): FileUploadResponseDto {
+        var fileUrl: String
+        var fileHash: String
+        val timestamp = SimpleDateFormat("yyyy-MM-dd_HH-mm-ss").format(Date())
+        val extension = file.originalFilename?.substringAfterLast(".")?.lowercase()
+        val newFileName = "${timestamp}.${extension}"
+        val uploadPath = Paths.get("uploads/avatars")
+        val savedFile = uploadPath.resolve(newFileName)
+        Files.createDirectories(uploadPath)
+        Files.copy(file.inputStream, savedFile,StandardCopyOption.REPLACE_EXISTING)
+        val bytes = Files.readAllBytes(savedFile)
+        val digest = MessageDigest.getInstance("SHA-256")
+        val hash = digest.digest(bytes).joinToString("") { "%02x".format(it) }
+        fileUrl ="/uploads/avatars/$newFileName"
+        fileHash = hash
+        return FileUploadResponseDto(fileUrl,fileHash)
+    }
+
+    override fun markMessagesAsRead(dto: ReadMessageRequestDto, username: String) {
+        val user = userRepository.findByUsernameAndDeletedFalse(username) ?: throw UsernameNotFoundException(username)
+        if (dto.messageIds.isEmpty()) return
+        messageStatusRepository.markAsReadMessage(
+            userId = user.id!!,
+            chatId = dto.chatId,
+            messageIds = dto.messageIds,
+            readAt = Date()
+        )
+        val unreadCount = messageStatusRepository.countUnreadMessages(user.id!!, dto.chatId)
+        simpleMessagingTemplate.convertAndSendToUser(
+            username,
+            "/queue/unread",
+            UnreadCountDto(dto.chatId, unreadCount)
+        )
+    }
+
+    override fun getAllMessage(chatId: Long,pageable: Pageable): Page<MessageResponseDto> {
+        val messages = messageRepository.getAllMessage(chatId, pageable)
+        return messages.map { message -> MessageResponseDto.toResponse(message) }
+    }
+
+    override fun editMessage(
+        chatId: Long,
+        messageId: Long,
+        newContent: String?,
+        username: String
+    ): MessageResponseDto {
+        val chat = chatRepository.findByIdAndDeletedFalse(chatId) ?: throw ChatNotFoundException(chatId)
+
+        TODO("Not yet implemented")
+    }
+
+    override fun getAllChat(pageable: Pageable): Page<GetOneChatResponseDto> {
+        val currentUserId = getCurrentUserId()
+
+        val chats = chatRepository.findAllNotDeleted(pageable)
+        return chats.map { chat -> GetOneChatResponseDto.toResponse(chat) }
+    }
+
     fun getUserChatsWithMembers(): List<ChatUserDto> {
         val userId = getCurrentUserId()
         val chats = chatMemberRepository.findChatsByUserId(userId)
@@ -274,6 +354,32 @@ class ChatServiceImpl(
                 groupName = chat.groupName,
                 members = members
             )
+        }
+    }
+
+}
+
+@Component
+class PresenceEventListener(
+    private val userRepository: UserRepository
+) : ApplicationListener<AbstractSubProtocolEvent> {
+
+    override fun onApplicationEvent(event: AbstractSubProtocolEvent) {
+        val accessor = StompHeaderAccessor.wrap(event.message)
+        val username = accessor.user?.name ?: return
+        val user = userRepository.findByUsernameAndDeletedFalse(username) ?: throw UsernameNotFoundException(username)
+        when (event) {
+            is SessionConnectEvent -> {
+                user.status = UserStatus.ONLINE
+                userRepository.save(user)
+                println("🔵 $username online bo‘ldi")
+            }
+            is SessionDisconnectEvent -> {
+                user.status = UserStatus.OFFLINE
+                user.lastSeen = LocalDateTime.now()
+                userRepository.save(user)
+                println("⚪ $username offline bo‘ldi")
+            }
         }
     }
 

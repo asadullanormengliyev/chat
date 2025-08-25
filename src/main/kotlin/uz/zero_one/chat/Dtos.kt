@@ -1,6 +1,8 @@
 package uz.zero_one.chat
 
 import com.fasterxml.jackson.annotation.JsonProperty
+import java.time.LocalDateTime
+import java.time.ZoneId
 import java.util.Date
 
 data class BaseMessage(val code: Int,val message: String?)
@@ -27,7 +29,6 @@ data class UserUpdateRequestDto(
     val username: String?,
     val bio: String?
 )
-
 
 data class GetOneUserResponseDto(
     val id: Long,
@@ -69,7 +70,12 @@ data class GetOneChatResponseDto(
 
 data class MessageRequestDto(
     val chatId: Long,
-    val content: String?,
+    val messageType: MessageType,
+    val content: String? = null,
+    val fileUrl: String? = null,
+    val fileHash: String? = null,
+    val latitude: Double? = null,
+    val longitude: Double? = null,
     val replyToId: Long? = null
 )
 
@@ -77,19 +83,27 @@ data class MessageResponseDto(
     val id: Long,
     val chatId: Long,
     val senderId: Long,
+    val messageType: MessageType,
     val content: String?,
     val fileUrl: String?,
+    val fileHash: String?,
+    val latitude: Double?,
+    val longitude: Double?,
     val replyToId: Long?,
     val createdAt: Date?
 ) {
     companion object {
-        fun fromEntity(message: Message): MessageResponseDto =
+        fun toResponse(message: Message): MessageResponseDto =
             MessageResponseDto(
                 id = message.id!!,
                 chatId = message.chat.id!!,
                 senderId = message.sender.id!!,
+                messageType = message.messageType,
                 content = message.content,
                 fileUrl = message.fileUrl,
+                fileHash = message.fileHash,
+                latitude = message.latitude,
+                longitude = message.longitude,
                 replyToId = message.replyTo?.id,
                 createdAt = message.createdDate
             )
@@ -99,7 +113,6 @@ data class MessageResponseDto(
 data class AddMembersRequestDto(
     val ids: List<Long>
 )
-
 
 data class ChatUserDto(
     val chatId: Long,
@@ -114,3 +127,47 @@ data class UserDto(
     val userName: String,
     val avatarUrl: String?
 )
+
+data class FileUploadResponseDto(
+    val fileUrl: String,
+    val fileHash: String
+)
+
+data class UnreadCountDto(
+    val chatId: Long,
+    val unreadCount: Long
+)
+
+data class ReadMessageRequestDto(
+    val chatId: Long,
+    val messageIds: List<Long>
+)
+
+data class UserStatusDto(
+    val status: UserStatus,
+    val lastSeen: LocalDateTime?
+)
+
+data class ChatListItemDto(
+    val chatId: Long,
+    val chatName: String?,
+    val chatType: ChatType,
+    val lastMessage: String?,
+    val lastMessageAt: LocalDateTime,
+    val unreadCount: Long
+) {
+    companion object {
+        fun from(chat: Chat, message: Message, unreadCount: Long): ChatListItemDto {
+            return ChatListItemDto(
+                chatId = chat.id!!,
+                chatName = chat.groupName ?: message.sender.firstName,
+                chatType = chat.chatType,
+                lastMessage = message.content,
+                lastMessageAt = message.createdDate!!.toInstant()
+                    .atZone(ZoneId.systemDefault())
+                    .toLocalDateTime(),
+                unreadCount = unreadCount
+            )
+        }
+    }
+}

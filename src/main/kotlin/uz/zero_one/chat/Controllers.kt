@@ -3,8 +3,8 @@ package uz.zero_one.chat
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.messaging.handler.annotation.MessageMapping
+import org.springframework.messaging.handler.annotation.Payload
 import org.springframework.stereotype.Controller
-import org.springframework.web.bind.annotation.CrossOrigin
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
@@ -21,7 +21,6 @@ import java.security.Principal
 
 @RestController
 @RequestMapping("/api/v1/auth")
-//@CrossOrigin(origins = ["*"])
 class AuthController(private val userService: UserService) {
 
     @PostMapping("/login")
@@ -55,7 +54,7 @@ class UserController(private val userService: UserServiceImpl){
         userService.updateUser(id, request, file)
     }
 
-    @DeleteMapping("/delete/{id}")
+    @DeleteMapping("/{id}/delete")
     fun deleteUser(@PathVariable id: Long){
         userService.deleteUser(id)
     }
@@ -63,6 +62,11 @@ class UserController(private val userService: UserServiceImpl){
     @GetMapping("/get-all-users-by-username-search")
     fun getAllUsersByUsernameSearch(@RequestParam(required = false) search: String?,pageable: Pageable): Page<GetOneUserResponseDto>{
         return userService.getAllUsersByUsernameSearch(search,pageable)
+    }
+
+    @GetMapping("/{id}/status")
+    fun getUserStatus(@PathVariable id: Long): UserStatusDto {
+         return userService.getUserStatus(id)
     }
 
 }
@@ -76,17 +80,11 @@ class ChatController(private val chatService: ChatServiceImpl){
         return chatService.createPrivateChat(userId)
     }
 
-   /* @MessageMapping("/chat.sendMessage")
-    fun sendMessage(@RequestPart("data") request: MessageRequestDto,
-                      @RequestPart("file", required = false) file: MultipartFile?) {
-        chatService.sendMessage(request,file)
-    }*/
-
     @MessageMapping("/chat.sendMessage")
     fun sendMessage(requestDto: MessageRequestDto,principal: Principal) {
         val username = principal.name
         println("Request messagega keldi = $username")
-        chatService.sendMessage(requestDto,username,null)
+        chatService.sendMessage(requestDto,username)
     }
 
     @PostMapping
@@ -94,8 +92,8 @@ class ChatController(private val chatService: ChatServiceImpl){
         chatService.createPublicChat(groupName,file)
     }
 
-    @PostMapping("/add-members")
-    fun addMembers(@RequestParam chatId: Long,@RequestBody requestDto: AddMembersRequestDto){
+    @PostMapping("/add-members/{chatId}")
+    fun addMembers(@PathVariable chatId: Long, @RequestBody requestDto: AddMembersRequestDto){
         chatService.addMembers(chatId,requestDto)
     }
 
@@ -103,6 +101,23 @@ class ChatController(private val chatService: ChatServiceImpl){
     fun getChats(): List<ChatUserDto> {
         return chatService.getUserChatsWithMembers()
     }
+
+    @PostMapping("/file/uploads")
+    fun saveFile(@RequestParam("file") file: MultipartFile): FileUploadResponseDto{
+        return chatService.saveFile(file)
+    }
+
+    @MessageMapping("/chat.read")
+    fun markAsReadMessage(@Payload dto: ReadMessageRequestDto,
+                   principal: Principal) {
+        chatService.markMessagesAsRead(dto, principal.name)
+    }
+
+    @GetMapping("/{chatId}/messages")
+    fun getMessages(@PathVariable chatId: Long, pageable: Pageable): Page<MessageResponseDto> {
+        return chatService.getAllMessage(chatId,pageable)
+    }
+
 
 }
 

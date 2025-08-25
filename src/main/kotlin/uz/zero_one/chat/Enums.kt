@@ -4,6 +4,11 @@ enum class ChatType {
     PRIVATE, GROUP
 }
 
+enum class UserStatus {
+    ONLINE,
+    OFFLINE
+}
+
 enum class MemberRole {
     OWNER, MEMBER,ADMIN
 }
@@ -14,6 +19,16 @@ enum class ErrorCode(val code: Int){
     USER_NOT_FOUND_EXCEPTION(102),
     CHAT_NOT_FOUND_EXCEPTION(103),
     CHAT_ACCESS_DENIED(104),
-    CHAT_MEMBER_NOT_FOUND(105)
+    CHAT_MEMBER_NOT_FOUND(105),
+    USERNAME_NOT_FOUND_EXCEPTION(106)
 }
 
+enum class MessageType {
+    TEXT,
+    IMAGE,
+    VIDEO,
+    FILE,
+    AUDIO,
+    LOCATION,
+    POLL
+}

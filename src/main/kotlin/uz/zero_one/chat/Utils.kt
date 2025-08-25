@@ -1,9 +1,6 @@
 package uz.zero_one.chat
 
 import org.springframework.beans.factory.annotation.Value
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
-import org.springframework.security.core.Authentication
-import org.springframework.security.core.GrantedAuthority
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.stereotype.Component
 import java.security.MessageDigest
@@ -14,23 +11,6 @@ import javax.crypto.spec.SecretKeySpec
 class TelegramAuthValidator(
     @Value("\${telegram.bot.token}") private val botToken: String
 ) {
-    /*fun validate(request: TelegramLoginRequestDto): Boolean {
-        val secretKey = MessageDigest.getInstance("SHA-256").digest(botToken.toByteArray())
-        val dataCheckString = buildString {
-            append("auth_date=${request.authDate}\n")
-            request.firstName?.let { append("first_name=$it\n") }
-            append("id=${request.telegramId}\n")
-            request.username?.let { append("username=$it\n") }
-            request.photoUrl?.let { append("photo_url=$it\n") }
-        }.trimEnd()
-
-        val hmac = Mac.getInstance("HmacSHA256")
-        hmac.init(SecretKeySpec(secretKey, "HmacSHA256"))
-        val hashBytes = hmac.doFinal(dataCheckString.toByteArray())
-        val hexHash = hashBytes.joinToString("") { "%02x".format(it) }
-
-        return hexHash == request.hash
-    }*/
 
     fun validate(request: TelegramLoginRequestDto): Boolean {
         val secretKey = MessageDigest.getInstance("SHA-256").digest(botToken.toByteArray())

@@ -1,6 +1,7 @@
 package uz.zero_one.chat
 
 import jakarta.persistence.Column
+import jakarta.persistence.ElementCollection
 import jakarta.persistence.Entity
 import jakarta.persistence.EntityListeners
 import jakarta.persistence.EnumType
@@ -39,8 +40,11 @@ class User(
     var avatarUrl: String?,
     var avatarHash: String?,
     var bio: String?,
-    var authDate: Long
-): BaseEntity()
+    var authDate: Long,
+    @Enumerated(EnumType.STRING)
+    var status: UserStatus = UserStatus.OFFLINE,
+    var lastSeen: LocalDateTime? = null
+) : BaseEntity()
 
 @Entity
 class Chat(
@@ -49,7 +53,7 @@ class Chat(
     val groupName: String?,
     val avatarUrl: String?,
     val avatarHash: String?,
-): BaseEntity()
+) : BaseEntity()
 
 @Entity
 @Table(name = "chat_members")
@@ -60,8 +64,9 @@ class ChatMember(
     val user: User,
     @Enumerated(EnumType.STRING)
     var role: MemberRole = MemberRole.MEMBER,
-    var joinedAt: LocalDateTime = LocalDateTime.now()
-): BaseEntity()
+    var joinedAt: LocalDateTime = LocalDateTime.now(),
+    var lastMessageAt: LocalDateTime? = null
+) : BaseEntity()
 
 @Entity
 class Message(
@@ -69,13 +74,17 @@ class Message(
     val chat: Chat,
     @ManyToOne
     val sender: User,
-    var content: String?,
-    var fileUrl: String?,
-    var fileHash: String?,
+    @Enumerated(EnumType.STRING)
+    var messageType: MessageType,
+    var content: String? = null,
+    var fileUrl: String? = null,
+    var fileHash: String? = null,
+    var latitude: Double? = null,
+    var longitude: Double? = null,
     @ManyToOne
     var replyTo: Message?,
     var edited: Boolean = false
-): BaseEntity()
+) : BaseEntity()
 
 @Entity
 @Table(name = "message_status")
@@ -86,4 +95,4 @@ class MessageStatus(
     val user: User,
     var isRead: Boolean = false,
     var readAt: LocalDateTime? = null
-): BaseEntity()
+) : BaseEntity()

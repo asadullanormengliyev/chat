@@ -44,20 +44,3 @@ class JwtAuthenticationFilter(private val jwtService: JwtService, ): OncePerRequ
     }
 
 }
-
-@Component
-class CustomHandshakeHandler : DefaultHandshakeHandler() {
-    override fun determineUser(
-        request: ServerHttpRequest,
-        wsHandler: WebSocketHandler,
-        attributes: MutableMap<String, Any>
-    ): Principal {
-        val authentication = SecurityContextHolder.getContext().authentication
-        val username = authentication?.name ?: "anon-${UUID.randomUUID()}"
-        return StompPrincipal(username)
-    }
-}
-
-class StompPrincipal(private val name: String) : Principal {
-    override fun getName(): String = name
-}
