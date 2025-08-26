@@ -119,11 +119,12 @@ class ChatController(private val chatService: ChatServiceImpl){
     }
 
     @MessageMapping("/chat/{chatId}/history")
-    fun getMessages(@DestinationVariable chatId: Long, pageable: Pageable,principal: Principal) {
+    fun getMessages(@DestinationVariable chatId: Long, requestPageDto: MessageRequestPageDto,principal: Principal) {
         println("Chat ID = $chatId")
         val username = principal.name
-        chatService.getAllMessage(chatId, pageable,username)
+        chatService.getAllMessage(chatId, requestPageDto,username)
     }
+
     @MessageMapping("/message.edit")
     fun editMessage(requestDto: EditMessageRequestDto, principal: Principal){
         val username = principal.name

@@ -180,3 +180,8 @@ data class EditMessageRequestDto(
     val messageId: Long,
     val message: String?
 )
+
+data class MessageRequestPageDto(
+    val page: Int,
+    val size: Int
+)
