@@ -175,7 +175,8 @@ class ChatServiceImpl(
         val chat = chatRepository.findByIdAndDeletedFalse(messageDto.chatId) ?: throw ChatNotFoundException(messageDto.chatId)
         val sender = userRepository.findByUsernameAndDeletedFalse(username) ?: throw UsernameNotFoundException(username)
         val replyMessage = messageDto.replyToId?.let { messageRepository.findByIdOrNull(it) }
-
+        println("Chatid = ${chat.id}")
+        println("SenderUsername = ${sender.username}")
         val message = messageRepository.save(
             Message(
                 chat = chat,
@@ -228,6 +229,7 @@ class ChatServiceImpl(
                         response
                     )
                     val unreadCount = messageStatusRepository.countUnreadMessages(member.user.id!!,chat.id!!)
+                    println("Har bir userga yuborilayabdi")
                     simpleMessagingTemplate.convertAndSendToUser(
                         member.user.username,
                         "/queue/chat-list",
@@ -364,7 +366,6 @@ class ChatServiceImpl(
             } else {
                 otherMember?.user?.firstName to otherMember?.user?.avatarUrl
             }
-
             ChatListItemDto.from(chat, lastMessage, unreadCount).copy(chatName = chatName, chatImageUrl = chatImageUrl)
         }.sortedByDescending { it.lastMessageAt }
     }
