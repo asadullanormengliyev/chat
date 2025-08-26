@@ -42,7 +42,7 @@ interface ChatService {
     fun addMembers(chatId: Long,requestDto: AddMembersRequestDto)
     fun saveFile(file: MultipartFile): FileUploadResponseDto
     fun markMessagesAsRead(dto: ReadMessageRequestDto, username: String)
-    fun getAllMessage(chatId: Long,pageable: Pageable): Page<MessageResponseDto>
+    fun getAllMessage(chatId: Long,pageable: Pageable,username: String)
     fun editMessage(chatId: Long, messageId: Long, newContent: String?, username: String)
     fun getChatList(): List<ChatListItemDto>
 }
@@ -318,9 +318,15 @@ class ChatServiceImpl(
         )
     }
 
-    override fun getAllMessage(chatId: Long,pageable: Pageable): Page<MessageResponseDto> {
+    override fun getAllMessage(chatId: Long,pageable: Pageable,username: String) {
         val messages = messageRepository.getAllMessage(chatId, pageable)
-        return messages.map { message -> MessageResponseDto.toResponse(message) }
+        val map = messages.map { message -> MessageResponseDto.toResponse(message) }
+        println("Map = ${map.forEach { dto -> dto.content }}")
+        simpleMessagingTemplate.convertAndSendToUser(
+            username,
+            "/queue/messages",
+            map
+        )
     }
 
     override fun editMessage(

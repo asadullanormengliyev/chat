@@ -2,6 +2,7 @@ package uz.zero_one.chat
 
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
+import org.springframework.messaging.handler.annotation.DestinationVariable
 import org.springframework.messaging.handler.annotation.MessageMapping
 import org.springframework.stereotype.Controller
 import org.springframework.web.bind.annotation.DeleteMapping
@@ -117,11 +118,12 @@ class ChatController(private val chatService: ChatServiceImpl){
         chatService.markMessagesAsRead(dto, principal.name)
     }
 
-    @GetMapping("/{chatId}/messages")
-    fun getMessages(@PathVariable chatId: Long, pageable: Pageable): Page<MessageResponseDto> {
-        return chatService.getAllMessage(chatId,pageable)
+    @MessageMapping("/chat/{chatId}/history")
+    fun getMessages(@DestinationVariable chatId: Long, pageable: Pageable,principal: Principal) {
+        println("Chat ID = $chatId")
+        val username = principal.name
+        chatService.getAllMessage(chatId, pageable,username)
     }
-
     @MessageMapping("/message.edit")
     fun editMessage(requestDto: EditMessageRequestDto, principal: Principal){
         val username = principal.name
