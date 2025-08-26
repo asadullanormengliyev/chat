@@ -123,9 +123,9 @@ class ChatController(private val chatService: ChatServiceImpl){
     }
 
     @MessageMapping("/message.edit")
-    fun editMessage(@RequestPart chatId: Long, @RequestParam messageId: Long, @RequestParam message: String?, principal: Principal){
+    fun editMessage(requestDto: EditMessageRequestDto, principal: Principal){
         val username = principal.name
-        chatService.editMessage(chatId,messageId,message,username)
+        chatService.editMessage(requestDto.chatId,requestDto.messageId,requestDto.message,username)
     }
 }
 

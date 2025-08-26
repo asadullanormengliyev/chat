@@ -171,3 +171,9 @@ data class ChatListItemDto(
         }
     }
 }
+
+data class EditMessageRequestDto(
+    val chatId: Long,
+    val messageId: Long,
+    val message: String?
+)
