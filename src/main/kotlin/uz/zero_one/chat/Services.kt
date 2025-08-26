@@ -357,15 +357,15 @@ class ChatServiceImpl(
         return chats.map { chat ->
             val lastMessage = messageRepository.findTopByChatIdOrderByCreatedDateDesc(chat.id!!)
             val unreadCount = messageStatusRepository.countUnreadMessages(userId, chat.id!!)
-
             val otherMember = chatMemberRepository.findByChatIdAndDeletedFalse(chat.id!!)
                 .firstOrNull { it.user.id != userId }
-            val chatName = if (chat.chatType == ChatType.GROUP) {
-                chat.groupName
+            val (chatName, chatImageUrl) = if (chat.chatType == ChatType.GROUP) {
+                chat.groupName to chat.avatarUrl
             } else {
-                otherMember?.user?.firstName
+                otherMember?.user?.firstName to otherMember?.user?.avatarUrl
             }
-            ChatListItemDto.from(chat, lastMessage, unreadCount).copy(chatName = chatName)
+
+            ChatListItemDto.from(chat, lastMessage, unreadCount).copy(chatName = chatName, chatImageUrl = chatImageUrl)
         }.sortedByDescending { it.lastMessageAt }
     }
 

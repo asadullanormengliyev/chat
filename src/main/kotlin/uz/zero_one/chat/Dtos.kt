@@ -154,7 +154,8 @@ data class ChatListItemDto(
     val chatType: ChatType,
     val lastMessage: String?,
     val lastMessageAt: LocalDateTime?,
-    val unreadCount: Long
+    val unreadCount: Long,
+    val chatImageUrl: String? = null
 ) {
     companion object {
         fun from(chat: Chat, message: Message?, unreadCount: Long): ChatListItemDto {
@@ -167,7 +168,8 @@ data class ChatListItemDto(
                     ?.toInstant()
                     ?.atZone(ZoneId.systemDefault())
                     ?.toLocalDateTime(),
-                unreadCount = unreadCount
+                unreadCount = unreadCount,
+                chatImageUrl = chat.avatarUrl ?:message?.sender?.avatarUrl
             )
         }
     }
