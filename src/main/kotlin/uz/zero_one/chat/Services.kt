@@ -355,7 +355,7 @@ class ChatServiceImpl(
         val members = chatMemberRepository.findByUserIdAndDeletedFalse(userId)
         return members.map { member ->
             val chat = member.chat
-            val lastMessage = messageRepository.findTopByChatIdOrderByCreatedAtDesc(chat.id!!)
+            val lastMessage = messageRepository.findTopByChatIdOrderByCreatedDateDesc(chat.id!!)
             val unreadCount = messageStatusRepository.countUnreadMessages(userId, chat.id!!)
             ChatListItemDto.from(chat, lastMessage, unreadCount)
         }.sortedByDescending { it.lastMessageAt }

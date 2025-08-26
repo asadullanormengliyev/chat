@@ -95,7 +95,8 @@ interface MessageRepository : BaseRepository<Message> {
     @Query("""select m from Message m where m.chat.id =:chatId and m.chat.deleted = false 
         and m.deleted = false order by m.createdDate desc """)
     fun getAllMessage(@Param("chatId") chatId: Long,pageable: Pageable): Page<Message>
-    fun findTopByChatIdOrderByCreatedAtDesc(chatId: Long): Message
+    fun findTopByChatIdOrderByCreatedDateDesc(chatId: Long): Message
+
 }
 
 @Repository
