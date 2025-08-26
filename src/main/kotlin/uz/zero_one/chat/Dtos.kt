@@ -157,13 +157,13 @@ data class ChatListItemDto(
     val unreadCount: Long
 ) {
     companion object {
-        fun from(chat: Chat, message: Message, unreadCount: Long): ChatListItemDto {
+        fun from(chat: Chat, message: Message?, unreadCount: Long): ChatListItemDto {
             return ChatListItemDto(
                 chatId = chat.id!!,
-                chatName = chat.groupName ?: message.sender.firstName,
+                chatName = chat.groupName ?: message?.sender?.firstName,
                 chatType = chat.chatType,
-                lastMessage = message.content,
-                lastMessageAt = message.createdDate!!.toInstant()
+                lastMessage = message?.content,
+                lastMessageAt = message?.createdDate!!.toInstant()
                     .atZone(ZoneId.systemDefault())
                     .toLocalDateTime(),
                 unreadCount = unreadCount

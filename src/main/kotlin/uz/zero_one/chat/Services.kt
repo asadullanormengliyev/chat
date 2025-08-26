@@ -352,6 +352,7 @@ class ChatServiceImpl(
 
     override fun getChatList(): List<ChatListItemDto> {
         val userId = getCurrentUserId()
+        println("UserId $userId")
         val members = chatMemberRepository.findByUserIdAndDeletedFalse(userId)
         return members.map { member ->
             val chat = member.chat
