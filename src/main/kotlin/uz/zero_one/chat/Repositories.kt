@@ -78,6 +78,8 @@ interface ChatRepository : BaseRepository<Chat> {
                 """
     )
     fun findPrivateChat(userId: Long, currentUserId: Long): Chat?
+
+
 }
 
 @Repository

@@ -158,7 +158,6 @@ data class ChatListItemDto(
 ) {
     companion object {
         fun from(chat: Chat, message: Message?, unreadCount: Long): ChatListItemDto {
-            println("LastMessageAt = ${message?.createdDate?.toInstant()?.atZone(ZoneId.systemDefault())?.toLocalDateTime()}")
             return ChatListItemDto(
                 chatId = chat.id!!,
                 chatName = chat.groupName ?: message?.sender?.firstName,

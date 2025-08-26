@@ -353,12 +353,19 @@ class ChatServiceImpl(
     override fun getChatList(): List<ChatListItemDto> {
         val userId = getCurrentUserId()
         val members = chatMemberRepository.findByUserIdAndDeletedFalse(userId)
-        return members.map { member ->
-            val chat = member.chat
+        val chats = members.map { it.chat }.distinctBy { it.id }
+        return chats.map { chat ->
             val lastMessage = messageRepository.findTopByChatIdOrderByCreatedDateDesc(chat.id!!)
             val unreadCount = messageStatusRepository.countUnreadMessages(userId, chat.id!!)
-            println("LastMessage = $lastMessage + unreadCount = $unreadCount")
-            ChatListItemDto.from(chat, lastMessage, unreadCount)
+
+            val otherMember = chatMemberRepository.findByChatIdAndDeletedFalse(chat.id!!)
+                .firstOrNull { it.user.id != userId }
+            val chatName = if (chat.chatType == ChatType.GROUP) {
+                chat.groupName
+            } else {
+                otherMember?.user?.firstName
+            }
+            ChatListItemDto.from(chat, lastMessage, unreadCount).copy(chatName = chatName)
         }.sortedByDescending { it.lastMessageAt }
     }
 
