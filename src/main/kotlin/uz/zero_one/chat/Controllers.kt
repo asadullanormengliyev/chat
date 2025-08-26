@@ -3,7 +3,6 @@ package uz.zero_one.chat
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.messaging.handler.annotation.MessageMapping
-import org.springframework.messaging.handler.annotation.Payload
 import org.springframework.stereotype.Controller
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
@@ -26,6 +25,11 @@ class AuthController(private val userService: UserService) {
     @PostMapping("/login")
     fun telegramLogin(@RequestBody request: TelegramLoginRequestDto): JwtResponseDto {
         return userService.login(request)
+    }
+
+    @GetMapping("/token-me")
+    fun tokenMe(): GetOneUserResponseDto{
+        return userService.tokenMe()
     }
 
 }
@@ -98,8 +102,8 @@ class ChatController(private val chatService: ChatServiceImpl){
     }
 
     @GetMapping("/users")
-    fun getChats(): List<ChatUserDto> {
-        return chatService.getUserChatsWithMembers()
+    fun getChats(): List<ChatListItemDto> {
+        return chatService.getChatList()
     }
 
     @PostMapping("/file/uploads")
@@ -108,7 +112,7 @@ class ChatController(private val chatService: ChatServiceImpl){
     }
 
     @MessageMapping("/chat.read")
-    fun markAsReadMessage(@Payload dto: ReadMessageRequestDto,
+    fun markAsReadMessage(dto: ReadMessageRequestDto,
                    principal: Principal) {
         chatService.markMessagesAsRead(dto, principal.name)
     }
@@ -118,6 +122,10 @@ class ChatController(private val chatService: ChatServiceImpl){
         return chatService.getAllMessage(chatId,pageable)
     }
 
-
+    @MessageMapping("/message.edit")
+    fun editMessage(@RequestPart chatId: Long, @RequestParam messageId: Long, @RequestParam message: String?, principal: Principal){
+        val username = principal.name
+        chatService.editMessage(chatId,messageId,message,username)
+    }
 }
 

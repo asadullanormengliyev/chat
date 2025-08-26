@@ -67,3 +67,8 @@ class UsernameNotFoundException(val msg: String) : DemoException(){
     override fun errorType() = ErrorCode.USERNAME_NOT_FOUND_EXCEPTION
     override fun getErrorMessageArguments(): Array<Any?> = arrayOf(msg)
 }
+
+class MessageNotFoundException(val id: Long) : DemoException(){
+    override fun errorType() = ErrorCode.MESSAGE_NOT_FOUND_EXCEPTION
+    override fun getErrorMessageArguments(): Array<Any?> = arrayOf(id)
+}

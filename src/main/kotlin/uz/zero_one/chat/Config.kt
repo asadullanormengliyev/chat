@@ -59,7 +59,7 @@ class SecurityConfig(private val jwtAuthenticationFilter: JwtAuthenticationFilte
     @Bean
     fun corsConfigurationSource(): CorsConfigurationSource {
         val configuration = CorsConfiguration()
-        configuration.allowedOrigins = listOf("https://sage-sunburst-60ba08.netlify.app","https://chat-h80l.onrender.com","https://12db78e60d4a.ngrok-free.app")
+        configuration.allowedOrigins = listOf("https://sage-sunburst-60ba08.netlify.app","https://chat-h80l.onrender.com","https://6ea1d63ffcc7.ngrok-free.app")
         configuration.allowedMethods = listOf("GET", "POST", "PUT", "DELETE", "OPTIONS")
         configuration.allowedHeaders = listOf("*")
         configuration.allowCredentials = true
@@ -76,7 +76,7 @@ class WebSocketConfig(private val userServiceImpl: UserServiceImpl) : WebSocketM
 
     override fun registerStompEndpoints(registry: StompEndpointRegistry) {
         registry.addEndpoint("/chat")
-            .setAllowedOriginPatterns("https://sage-sunburst-60ba08.netlify.app","https://chat-h80l.onrender.com","https://12db78e60d4a.ngrok-free.app")
+            .setAllowedOriginPatterns("https://sage-sunburst-60ba08.netlify.app","https://chat-h80l.onrender.com","https://6ea1d63ffcc7.ngrok-free.app")
              .withSockJS()
     }
 
@@ -92,7 +92,6 @@ class WebSocketConfig(private val userServiceImpl: UserServiceImpl) : WebSocketM
                 val accessor = MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor::class.java)
 
                 if (StompCommand.CONNECT == accessor?.command) {
-                    // 1️⃣ Headerni to‘g‘ri o‘qish
                     val raw = accessor.getFirstNativeHeader("Authorization")
                     val token = raw?.removePrefix("Bearer ")?.trim()
 
@@ -100,7 +99,6 @@ class WebSocketConfig(private val userServiceImpl: UserServiceImpl) : WebSocketM
                         try {
                             val auth = userServiceImpl.getAuthenticationFromToken(token)
                             println("AUTH ==== ${auth.name}")
-                            // muhim joy – STOMP session foydalanuvchisini bog‘lash
                             accessor.user = auth
                             SecurityContextHolder.getContext().authentication = auth
                             println("✅ STOMP CONNECT token tekshirildi: ${auth.name}")

@@ -20,7 +20,7 @@ class WebMvcConfigure : WebMvcConfigurer{
 
     override fun addCorsMappings(registry: CorsRegistry) {
         registry.addMapping("/**")
-            .allowedOriginPatterns("https://sage-sunburst-60ba08.netlify.app","https://chat-h80l.onrender.com","https://12db78e60d4a.ngrok-free.app") // yoki o'zingizning domeningiz
+            .allowedOriginPatterns("https://sage-sunburst-60ba08.netlify.app","https://chat-h80l.onrender.com","https://6ea1d63ffcc7.ngrok-free.app")
             .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
             .allowedHeaders("*")
             .allowCredentials(true)

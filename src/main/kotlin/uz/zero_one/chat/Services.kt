@@ -17,6 +17,7 @@ import org.springframework.web.socket.messaging.AbstractSubProtocolEvent
 import org.springframework.web.socket.messaging.SessionConnectEvent
 import org.springframework.web.socket.messaging.SessionDisconnectEvent
 import java.io.File
+import java.nio.file.AccessDeniedException
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.nio.file.StandardCopyOption
@@ -31,6 +32,7 @@ interface UserService {
     fun deleteUser(id: Long)
     fun getAllUsersByUsernameSearch(search: String?, pageable: Pageable): Page<GetOneUserResponseDto>
     fun getUserStatus(id: Long): UserStatusDto
+    fun tokenMe(): GetOneUserResponseDto
 }
 
 interface ChatService {
@@ -41,8 +43,8 @@ interface ChatService {
     fun saveFile(file: MultipartFile): FileUploadResponseDto
     fun markMessagesAsRead(dto: ReadMessageRequestDto, username: String)
     fun getAllMessage(chatId: Long,pageable: Pageable): Page<MessageResponseDto>
-    fun editMessage(chatId: Long, messageId: Long, newContent: String?, username: String): MessageResponseDto
-    fun getAllChat(pageable: Pageable): Page<GetOneChatResponseDto>
+    fun editMessage(chatId: Long, messageId: Long, newContent: String?, username: String)
+    fun getChatList(): List<ChatListItemDto>
 }
 
 @Service
@@ -115,6 +117,12 @@ class UserServiceImpl(
     override fun getUserStatus(id: Long): UserStatusDto {
         val user = userRepository.findByIdAndDeletedFalse(id) ?: throw UserNotFoundException(id)
         return UserStatusDto(user.status,user.lastSeen)
+    }
+
+    override fun tokenMe(): GetOneUserResponseDto {
+        val currentUserId = getCurrentUserId()
+        val user = userRepository.findByIdAndDeletedFalse(currentUserId) ?: throw UserNotFoundException(currentUserId)
+        return GetOneUserResponseDto.toResponse(user)
     }
 
     fun getAuthenticationFromToken(token: String): Authentication {
@@ -244,11 +252,7 @@ class ChatServiceImpl(
             val uploadPath = Paths.get("uploads/avatars")
             val savedFile = uploadPath.resolve(newFileName)
             Files.createDirectories(uploadPath)
-            Files.copy(
-                file.inputStream,
-                savedFile,
-                StandardCopyOption.REPLACE_EXISTING
-            )
+            Files.copy(file.inputStream, savedFile, StandardCopyOption.REPLACE_EXISTING)
             val bytes = Files.readAllBytes(savedFile)
             val digest = MessageDigest.getInstance("SHA-256")
             val hash = digest.digest(bytes).joinToString("") { "%02x".format(it) }
@@ -322,40 +326,39 @@ class ChatServiceImpl(
         messageId: Long,
         newContent: String?,
         username: String
-    ): MessageResponseDto {
+    ){
         val chat = chatRepository.findByIdAndDeletedFalse(chatId) ?: throw ChatNotFoundException(chatId)
+        val message = messageRepository.findByIdAndDeletedFalse(messageId) ?: throw MessageNotFoundException(messageId)
+        if (message.chat.id != chat.id){
+            throw IllegalArgumentException("Message bu chatga tegshli emas")
+        }
+        if (message.sender.username != username) {
+            throw AccessDeniedException("Siz faqat o‘z xabaringizni o‘zgartira olasiz!")
+        }
+        message.content = newContent
+        message.edited = true
+        val updateMessage = messageRepository.save(message)
+        val response = MessageResponseDto.toResponse(updateMessage)
 
-        TODO("Not yet implemented")
-    }
-
-    override fun getAllChat(pageable: Pageable): Page<GetOneChatResponseDto> {
-        val currentUserId = getCurrentUserId()
-
-        val chats = chatRepository.findAllNotDeleted(pageable)
-        return chats.map { chat -> GetOneChatResponseDto.toResponse(chat) }
-    }
-
-    fun getUserChatsWithMembers(): List<ChatUserDto> {
-        val userId = getCurrentUserId()
-        val chats = chatMemberRepository.findChatsByUserId(userId)
-
-        return chats.map { chat ->
-            val members = chatMemberRepository.findMembersByChatId(chat.id!!)
-                .map { cm ->
-                    UserDto(
-                        id = cm.user.id!!,
-                        firstName = cm.user.firstName,
-                        userName = cm.user.username,
-                        avatarUrl = cm.user.avatarUrl
-                    )
-                }
-            ChatUserDto(
-                chatId = chat.id!!,
-                chatType = chat.chatType.name,
-                groupName = chat.groupName,
-                members = members
+        val members = chatMemberRepository.findByChatIdAndDeletedFalse(chat.id!!)
+        members.filter { it.user.username != username }.forEach { member ->
+            simpleMessagingTemplate.convertAndSendToUser(
+                member.user.username,
+                "/queue/messages",
+                response
             )
         }
+    }
+
+    override fun getChatList(): List<ChatListItemDto> {
+        val userId = getCurrentUserId()
+        val members = chatMemberRepository.findByUserIdAndDeletedFalse(userId)
+        return members.map { member ->
+            val chat = member.chat
+            val lastMessage = messageRepository.findTopByChatIdOrderByCreatedAtDesc(chat.id!!)
+            val unreadCount = messageStatusRepository.countUnreadMessages(userId, chat.id!!)
+            ChatListItemDto.from(chat, lastMessage, unreadCount)
+        }.sortedByDescending { it.lastMessageAt }
     }
 
 }
