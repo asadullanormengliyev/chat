@@ -83,7 +83,7 @@ data class MessageResponseDto(
     val id: Long,
     val chatId: Long,
     val senderId: Long,
-    val messageType: MessageType,
+    val messageType: MessageType?,
     val content: String?,
     val fileUrl: String?,
     val fileHash: String?,
