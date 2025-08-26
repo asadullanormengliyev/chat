@@ -71,6 +71,7 @@ class UserServiceImpl(
 
         val accessToken = jwtService.generateAccessToken(user)
         val refreshToken = jwtService.generateRefreshToken(user)
+        println("Accsess Token = $accessToken")
         return JwtResponseDto(accessToken, refreshToken)
     }
 

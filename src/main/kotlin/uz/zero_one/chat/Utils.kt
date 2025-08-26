@@ -14,7 +14,6 @@ class TelegramAuthValidator(
 
     fun validate(request: TelegramLoginRequestDto): Boolean {
         val secretKey = MessageDigest.getInstance("SHA-256").digest(botToken.toByteArray())
-
         val fields = mutableMapOf(
             "auth_date" to request.authDate.toString(),
             "id" to request.telegramId.toString()
