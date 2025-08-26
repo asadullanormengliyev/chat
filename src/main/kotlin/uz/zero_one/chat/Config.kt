@@ -101,12 +101,12 @@ class WebSocketConfig(private val userServiceImpl: UserServiceImpl) : WebSocketM
                             println("AUTH ==== ${auth.name}")
                             accessor.user = auth
                             SecurityContextHolder.getContext().authentication = auth
-                            println("✅ STOMP CONNECT token tekshirildi: ${auth.name}")
+                            println("STOMP CONNECT token tekshirildi: ${auth.name}")
                         } catch (ex: Exception) {
-                            println("❌ Token valid emas: ${ex.message}")
+                            println("Token valid emas: ${ex.message}")
                         }
                     } else {
-                        println("⚠️ Token yo‘q CONNECT headerda")
+                        println("Token yo‘q CONNECT headerda")
                     }
                 }
 
