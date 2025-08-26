@@ -153,7 +153,7 @@ data class ChatListItemDto(
     val chatName: String?,
     val chatType: ChatType,
     val lastMessage: String?,
-    val lastMessageAt: LocalDateTime,
+    val lastMessageAt: LocalDateTime?,
     val unreadCount: Long
 ) {
     companion object {
