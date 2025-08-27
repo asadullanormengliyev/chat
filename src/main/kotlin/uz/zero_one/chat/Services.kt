@@ -43,7 +43,7 @@ interface ChatService {
     fun addMembers(chatId: Long,requestDto: AddMembersRequestDto)
     fun saveFile(file: MultipartFile): FileUploadResponseDto
     fun markMessagesAsRead(dto: ReadMessageRequestDto, username: String)
-    fun getAllMessage(chatId: Long,requestPageDto: MessageRequestPageDto,username: String)
+    fun getAllMessage(chatId: Long,username: String)
     fun editMessage(chatId: Long, messageId: Long, newContent: String?, username: String)
     fun getChatList(): List<ChatListItemDto>
 }
@@ -319,9 +319,9 @@ class ChatServiceImpl(
         )
     }
 
-    override fun getAllMessage(chatId: Long,requestPageDto: MessageRequestPageDto,username: String) {
-        val pageRequest = PageRequest.of(requestPageDto.page, requestPageDto.size)
-        val messages = messageRepository.getAllMessage(chatId, pageRequest)
+    override fun getAllMessage(chatId: Long,username: String) {
+        println("Messgaelarga keldi")
+        val messages = messageRepository.getAllMessage(chatId)
         val map = messages.map { message -> MessageResponseDto.toResponse(message) }
         println("Map = ${map.forEach { dto -> dto.content }}")
         simpleMessagingTemplate.convertAndSendToUser(
