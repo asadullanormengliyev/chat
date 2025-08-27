@@ -69,7 +69,8 @@ data class GetOneChatResponseDto(
 }
 
 data class MessageRequestDto(
-    val chatId: Long,
+    val chatId: Long?,
+    val receiverId: Long?,
     val messageType: MessageType,
     val content: String? = null,
     val fileUrl: String? = null,

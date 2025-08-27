@@ -3,7 +3,6 @@ package uz.zero_one.chat
 import jakarta.transaction.Transactional
 import org.springframework.context.ApplicationListener
 import org.springframework.data.domain.Page
-import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Pageable
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.messaging.simp.SimpMessagingTemplate
@@ -37,7 +36,7 @@ interface UserService {
 }
 
 interface ChatService {
-    fun createPrivateChat(userId: Long): GetOneChatResponseDto
+    fun createPrivateChat(senderId: Long, receiverId: Long): Chat
     fun sendMessage(messageDto: MessageRequestDto,username: String)
     fun createPublicChat(groupName: String,file: MultipartFile?): GetOneChatResponseDto
     fun addMembers(chatId: Long,requestDto: AddMembersRequestDto)
@@ -151,32 +150,29 @@ class ChatServiceImpl(
 ) : ChatService {
 
     @Transactional
-    override fun createPrivateChat(userId: Long): GetOneChatResponseDto {
-        val currentUserId = getCurrentUserId()
-        val user = userRepository.findByIdAndDeletedFalse(userId) ?: throw UserNotFoundException(userId)
-        val currentUser = userRepository.findByIdAndDeletedFalse(currentUserId) ?: throw UserNotFoundException(currentUserId)
-
-        val existing = chatRepository.findPrivateChat(user.id!!, currentUserId)
-        if (existing != null) return GetOneChatResponseDto.toResponse(existing)
+    override fun createPrivateChat(senderId: Long, receiverId: Long): Chat {
+        val existing = chatRepository.findPrivateChat(receiverId, senderId)
+        if (existing != null) return existing
+        val sender = userRepository.findByIdAndDeletedFalse(senderId) ?: throw UserNotFoundException(senderId)
+        val user = userRepository.findByIdAndDeletedFalse(receiverId)
+            ?: throw UserNotFoundException(receiverId)
 
         val chat = chatRepository.save(
-            Chat(
-                chatType = ChatType.PRIVATE,
-                groupName = null,
-                avatarUrl = null,
-                avatarHash = null
-            )
+            Chat(chatType = ChatType.PRIVATE,null,null,null)
         )
-
+        chatMemberRepository.save(ChatMember(chat = chat, user = sender))
         chatMemberRepository.save(ChatMember(chat = chat, user = user))
-        chatMemberRepository.save(ChatMember(chat = chat, user = currentUser))
-        return GetOneChatResponseDto.toResponse(chat)
+        return chat
     }
 
     @Transactional
     override fun sendMessage(messageDto: MessageRequestDto, username: String) {
-        val chat = chatRepository.findByIdAndDeletedFalse(messageDto.chatId) ?: throw ChatNotFoundException(messageDto.chatId)
-        val sender = userRepository.findByUsernameAndDeletedFalse(username) ?: throw UsernameNotFoundException(username)
+         val sender = userRepository.findByUsernameAndDeletedFalse(username) ?: throw UsernameNotFoundException(username)
+        val chat = if (messageDto.chatId == null && messageDto.receiverId != null) {
+            createPrivateChat(sender.id!!, messageDto.receiverId)
+        } else {
+            chatRepository.findByIdAndDeletedFalse(messageDto.chatId!!) ?: throw ChatNotFoundException(messageDto.chatId)
+        }
         val replyMessage = messageDto.replyToId?.let { messageRepository.findByIdOrNull(it) }
         println("Chatid = ${chat.id}")
         println("SenderUsername = ${sender.username}")
