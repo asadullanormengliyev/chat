@@ -72,3 +72,13 @@ class MessageNotFoundException(val id: Long) : DemoException(){
     override fun errorType() = ErrorCode.MESSAGE_NOT_FOUND_EXCEPTION
     override fun getErrorMessageArguments(): Array<Any?> = arrayOf(id)
 }
+
+class MessageAccessDeniedException(val msg: String) : DemoException(){
+    override fun errorType() = ErrorCode.MESSAGE_ACCESS_DENIED_EXCEPTION
+    override fun getErrorMessageArguments(): Array<Any?> = arrayOf(msg)
+}
+
+class MessageChatMismatchException(val msg: String?) :  DemoException(){
+    override fun errorType() = ErrorCode.MESSAGE_CHAT_MISMATCH_EXCEPTION
+    override fun getErrorMessageArguments(): Array<Any?> = arrayOf(msg)
+}

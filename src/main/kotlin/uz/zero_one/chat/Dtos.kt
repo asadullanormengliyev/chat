@@ -182,7 +182,7 @@ data class EditMessageRequestDto(
     val message: String?
 )
 
-data class MessageRequestPageDto(
-    val page: Int,
-    val size: Int
+data class DeleteMessageRequestDto(
+    val chatId: Long,
+    val messageIds: List<Long>
 )

@@ -47,6 +47,7 @@ interface ChatService {
     fun getChatList(): List<ChatListItemDto>
     fun deletedChatForMe(chatId: Long)
     fun deletedChatForEveryone(chatId: Long)
+    fun deleteMessage(requestDto: DeleteMessageRequestDto,username: String)
 }
 
 @Service
@@ -66,7 +67,7 @@ class UserServiceImpl(
                     firstName = request.firstName ?: "No name",
                     telegramId = request.telegramId,
                     username = request.username ?: "unknown_${request.telegramId}",
-                    avatarUrl = request.photoUrl,
+                    avatarUrl = null,
                     authDate = request.authDate,
                     avatarHash = null,
                     bio = null
@@ -333,10 +334,10 @@ class ChatServiceImpl(
         val chat = chatRepository.findByIdAndDeletedFalse(chatId) ?: throw ChatNotFoundException(chatId)
         val message = messageRepository.findByIdAndDeletedFalse(messageId) ?: throw MessageNotFoundException(messageId)
         if (message.chat.id != chat.id){
-            throw IllegalArgumentException("Message bu chatga tegshli emas")
+            throw MessageChatMismatchException(message.content)
         }
         if (message.sender.username != username) {
-            throw AccessDeniedException("Siz faqat o‘z xabaringizni o‘zgartira olasiz!")
+            throw MessageAccessDeniedException(message.sender.username)
         }
         message.content = newContent
         message.edited = true
@@ -380,6 +381,39 @@ class ChatServiceImpl(
 
     override fun deletedChatForEveryone(chatId: Long) {
         TODO("Not yet implemented")
+    }
+
+    @Transactional
+    override fun deleteMessage(requestDto: DeleteMessageRequestDto,username: String) {
+        val chat = chatRepository.findByIdAndDeletedFalse(requestDto.chatId) ?: throw ChatNotFoundException(requestDto.chatId)
+        val user = userRepository.findByUsernameAndDeletedFalse(username)
+            ?: throw UsernameNotFoundException(username)
+        val messages = messageRepository.findAllById(requestDto.messageIds)
+        messages.forEach { message ->
+            if (message.chat.id != chat.id) {
+                throw MessageChatMismatchException(message.content)
+            }
+            if (message.sender.id != user.id) {
+                throw MessageAccessDeniedException(message.sender.username)
+            }
+        }
+        messageRepository.trashList(requestDto.messageIds)
+        val deleteMap = mapOf(
+            "chatId" to chat.id,
+            "messagesId" to requestDto.messageIds
+        )
+        if (chat.chatType == ChatType.GROUP){
+            simpleMessagingTemplate.convertAndSend(
+                "/topic/chat.${chat.id}",
+                deleteMap
+            )
+        }else{
+            simpleMessagingTemplate.convertAndSendToUser(
+                username,
+                "/queue/delete",
+                deleteMap
+            )
+        }
     }
 
 }

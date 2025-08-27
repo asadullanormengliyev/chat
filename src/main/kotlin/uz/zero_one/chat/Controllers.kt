@@ -113,5 +113,11 @@ class ChatController(private val chatService: ChatServiceImpl){
         chatService.editMessage(requestDto.chatId,requestDto.messageId,requestDto.message,username)
     }
 
+    @MessageMapping("/message.delete")
+    fun deleteMessage(requestDto: DeleteMessageRequestDto,principal: Principal){
+        val username = principal.name
+        chatService.deleteMessage(requestDto,username)
+    }
+
 }
 
