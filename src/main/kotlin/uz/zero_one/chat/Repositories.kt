@@ -85,7 +85,7 @@ interface ChatRepository : BaseRepository<Chat> {
 @Repository
 interface ChatMemberRepository : BaseRepository<ChatMember> {
    fun findByChatIdAndDeletedFalse(id: Long): List<ChatMember>
-    fun findByChatIdAndUserId(chatId: Long,userId: Long): ChatMember
+    fun findByChatIdAndUserId(chatId: Long,userId: Long): ChatMember?
     fun existsByChatIdAndUserId(chatId: Long,userId: Long): Boolean
 
     fun findByUserIdAndDeletedFalse(userId: Long): List<ChatMember>

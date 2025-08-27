@@ -8,7 +8,6 @@ import org.springframework.web.bind.annotation.*
 import org.springframework.web.multipart.MultipartFile
 import java.security.Principal
 
-
 @RestController
 @RequestMapping("/api/v1/auth")
 class AuthController(private val userService: UserService) {
@@ -74,6 +73,7 @@ class ChatController(private val chatService: ChatServiceImpl){
     fun sendMessage(requestDto: MessageRequestDto,principal: Principal) {
         val username = principal.name
         println("Request messagega keldi = $username")
+        println("Get CurrentUserId ${getCurrentUserId()}")
         chatService.sendMessage(requestDto,username)
     }
 

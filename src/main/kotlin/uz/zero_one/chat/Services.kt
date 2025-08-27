@@ -272,8 +272,8 @@ class ChatServiceImpl(
         val chat = chatRepository.findByIdAndDeletedFalse(chatId) ?: throw ChatNotFoundException(chatId)
         val currentMember = chatMemberRepository.findByChatIdAndUserId(chatId, currentUserId)
 
-        if (currentMember.role != MemberRole.OWNER) {
-            throw ChatAccessDeniedException(currentMember.role.name)
+        if (currentMember?.role != MemberRole.OWNER) {
+            throw ChatAccessDeniedException(currentMember?.role?.name ?: " ")
         }
         requestDto.ids.forEach { dto ->
             val user = userRepository.findByIdAndDeletedFalse(dto) ?: throw UserNotFoundException(dto)
