@@ -167,6 +167,7 @@ class ChatServiceImpl(
 
     @Transactional
     override fun sendMessage(messageDto: MessageRequestDto, username: String) {
+        println("sendmessage")
          val sender = userRepository.findByUsernameAndDeletedFalse(username) ?: throw UsernameNotFoundException(username)
         val chat = if (messageDto.chatId == null && messageDto.receiverId != null) {
             createPrivateChat(sender.id!!, messageDto.receiverId)

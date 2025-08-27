@@ -73,7 +73,6 @@ class ChatController(private val chatService: ChatServiceImpl){
     fun sendMessage(requestDto: MessageRequestDto,principal: Principal) {
         val username = principal.name
         println("Request messagega keldi = $username")
-        println("Get CurrentUserId ${getCurrentUserId()}")
         chatService.sendMessage(requestDto,username)
     }
 
