@@ -46,6 +46,8 @@ interface ChatService {
     fun getAllMessage(chatId: Long,pageable: Pageable): Page<MessageResponseDto>
     fun editMessage(chatId: Long, messageId: Long, newContent: String?, username: String)
     fun getChatList(): List<ChatListItemDto>
+    fun deletedChatForMe(chatId: Long)
+    fun deletedChatForEveryone(chatId: Long)
 }
 
 @Service
@@ -231,7 +233,7 @@ class ChatServiceImpl(
                     )
                     val unreadCount = messageStatusRepository.countUnreadMessages(member.user.id!!,chat.id!!)
                     println("Har bir userga yuborilayabdi")
-                    println("Chat ")
+                    println("Chat = ${chat.id} + MessageContent = ${message.content} + UnreadCount = $unreadCount")
                     simpleMessagingTemplate.convertAndSendToUser(
                         member.user.username,
                         "/queue/chat-list",
@@ -370,6 +372,17 @@ class ChatServiceImpl(
             }
             ChatListItemDto.from(chat, lastMessage, unreadCount).copy(chatName = chatName, chatImageUrl = chatImageUrl)
         }.sortedByDescending { it.lastMessageAt }
+    }
+
+    override fun deletedChatForMe(chatId: Long) {
+        val currentUserId = getCurrentUserId()
+        val member = chatMemberRepository.findByChatIdAndUserId(chatId, currentUserId)?:throw ChatNotFoundException(chatId)
+        member.deletedAt = LocalDateTime.now()
+        chatMemberRepository.trash(member.id!!)
+    }
+
+    override fun deletedChatForEveryone(chatId: Long) {
+        TODO("Not yet implemented")
     }
 
 }

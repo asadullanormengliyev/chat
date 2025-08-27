@@ -65,7 +65,8 @@ class ChatMember(
     @Enumerated(EnumType.STRING)
     var role: MemberRole = MemberRole.MEMBER,
     var joinedAt: LocalDateTime = LocalDateTime.now(),
-    var lastMessageAt: LocalDateTime? = null
+    var lastMessageAt: LocalDateTime? = null,
+    var deletedAt: LocalDateTime? = null
 ) : BaseEntity()
 
 @Entity
