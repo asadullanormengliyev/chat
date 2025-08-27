@@ -119,12 +119,9 @@ class ChatController(private val chatService: ChatServiceImpl){
         chatService.markMessagesAsRead(dto, principal.name)
     }
 
-    @MessageMapping("/chat/{chatId}/history")
-    fun getMessages(@DestinationVariable chatId: Long,principal: Principal) {
-        println("Chat ID = $chatId")
-        val username = principal.name
-        println("Username $username")
-        chatService.getAllMessage(chatId,username)
+    @GetMapping("/{chatId}/messages")
+    fun getMessages(@PathVariable chatId: Long,pageable: Pageable): Page<MessageResponseDto> {
+       return chatService.getAllMessage(chatId,pageable)
     }
 
     @MessageMapping("/message.edit")

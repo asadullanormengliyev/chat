@@ -43,7 +43,7 @@ interface ChatService {
     fun addMembers(chatId: Long,requestDto: AddMembersRequestDto)
     fun saveFile(file: MultipartFile): FileUploadResponseDto
     fun markMessagesAsRead(dto: ReadMessageRequestDto, username: String)
-    fun getAllMessage(chatId: Long,username: String)
+    fun getAllMessage(chatId: Long,pageable: Pageable): Page<MessageResponseDto>
     fun editMessage(chatId: Long, messageId: Long, newContent: String?, username: String)
     fun getChatList(): List<ChatListItemDto>
 }
@@ -231,6 +231,7 @@ class ChatServiceImpl(
                     )
                     val unreadCount = messageStatusRepository.countUnreadMessages(member.user.id!!,chat.id!!)
                     println("Har bir userga yuborilayabdi")
+                    println("Chat ")
                     simpleMessagingTemplate.convertAndSendToUser(
                         member.user.username,
                         "/queue/chat-list",
@@ -319,16 +320,9 @@ class ChatServiceImpl(
         )
     }
 
-    override fun getAllMessage(chatId: Long,username: String) {
-        println("Messgaelarga keldi")
-        val messages = messageRepository.getAllMessage(chatId)
-        val map = messages.map { message -> MessageResponseDto.toResponse(message) }
-        println("Map = ${map.forEach { dto -> dto.content }}")
-        simpleMessagingTemplate.convertAndSendToUser(
-            username,
-            "/queue/messages",
-            map
-        )
+    override fun getAllMessage(chatId: Long,pageable: Pageable): Page<MessageResponseDto> {
+        val messages = messageRepository.getAllMessage(chatId,pageable)
+        return messages.map { message -> MessageResponseDto.toResponse(message) }
     }
 
     override fun editMessage(
