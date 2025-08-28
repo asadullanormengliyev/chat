@@ -145,7 +145,7 @@ data class ChatListItemDto(
     val chatId: Long,
     val chatName: String?,
     val chatType: ChatType,
-    val lastMessage: MessageResponseDto?,
+    val lastMessage: MessageDto?,
     val unreadCount: Long,
     val chatImageUrl: String? = null,
     val lastMessageAt: Date? = null
@@ -156,7 +156,7 @@ data class ChatListItemDto(
                 chatId = chat.id!!,
                 chatName = chat.groupName ?: lastMessage?.sender?.firstName,
                 chatType = chat.chatType,
-                lastMessage = lastMessage?.let { MessageResponseDto.toResponse(it) },
+                lastMessage = lastMessage?.let { MessageDto.toResponse(it) },
                 unreadCount = unreadCount,
                 chatImageUrl = chat.avatarUrl ?:lastMessage?.sender?.avatarUrl,
                 lastMessageAt = lastMessage?.createdDate
@@ -193,7 +193,7 @@ data class ChatListResponseDto(
     val chatName: String?,
     val chatType: ChatType,
     val chatImageUrl: String?,
-    val lastMessage: Message?,
+    val lastMessage: MessageDto?,
     val lastMessageAt: Date?,
     val unreadCount: Long,
     val userId: Long? = null,
@@ -211,7 +211,7 @@ data class ChatListResponseDto(
                 },
                 chatType = chat.chatType,
                 chatImageUrl = chat.avatarUrl ?: user?.avatarUrl,
-                lastMessage = lastMessage,
+                lastMessage = lastMessage?.let { MessageDto.toResponse(it) },
                 lastMessageAt = lastMessage?.createdDate,
                 unreadCount = unreadCount,
                 userId = user?.id,
@@ -221,3 +221,24 @@ data class ChatListResponseDto(
         }
     }
 }
+
+data class MessageDto(
+    val id: Long,
+    val chatId: Long,
+    val messageType: MessageType?,
+    val content: String?,
+    val createdAt: Date?
+){
+    companion object{
+        fun toResponse(message: Message): MessageDto{
+            return MessageDto(
+                id = message.id!!,
+                chatId = message.chat.id!!,
+                messageType = message.messageType,
+                content = message.content,
+                createdAt = message.createdDate
+            )
+        }
+    }
+}
+
