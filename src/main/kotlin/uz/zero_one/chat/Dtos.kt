@@ -145,7 +145,7 @@ data class ChatListItemDto(
     val chatId: Long,
     val chatName: String?,
     val chatType: ChatType,
-    val lastMessage: Message?,
+    val lastMessage: MessageResponseDto?,
     val unreadCount: Long,
     val chatImageUrl: String? = null,
     val lastMessageAt: Date? = null
@@ -156,7 +156,7 @@ data class ChatListItemDto(
                 chatId = chat.id!!,
                 chatName = chat.groupName ?: lastMessage?.sender?.firstName,
                 chatType = chat.chatType,
-                lastMessage = lastMessage,
+                lastMessage = lastMessage?.let { MessageResponseDto.toResponse(it) },
                 unreadCount = unreadCount,
                 chatImageUrl = chat.avatarUrl ?:lastMessage?.sender?.avatarUrl,
                 lastMessageAt = lastMessage?.createdDate
