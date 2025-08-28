@@ -64,6 +64,13 @@ interface UserRepository : BaseRepository<User> {
     ): Page<User>
 
     fun findByUsernameAndDeletedFalse(username: String): User?
+    @Query("""
+    select u from ChatMember cm
+    join cm.user u
+    where cm.chat.id = :chatId and cm.deleted = false
+""")
+    fun findUsersByChatId(@Param("chatId") chatId: Long): List<User>
+
 }
 
 @Repository
@@ -79,6 +86,8 @@ interface ChatRepository : BaseRepository<Chat> {
     )
     fun findPrivateChat(userId: Long, currentUserId: Long): Chat?
 
+    @Query("""select cm.chat from ChatMember cm inner join Chat c on cm.chat.id = c.id and cm.user.id =:userId and c.deleted = false and cm.deleted = false""")
+    fun findByUserIdAndChat(@Param("userId") userId: Long,pageable: Pageable): Page<Chat>
 
 }
 
@@ -97,9 +106,6 @@ interface MessageRepository : BaseRepository<Message> {
     @Query("""select m from Message m where m.chat.id =:chatId and m.chat.deleted = false 
         and m.deleted = false order by m.createdDate desc """)
     fun getAllMessage(@Param("chatId") chatId: Long,pageable: Pageable): Page<Message>
-
-    fun findTopByChatIdOrderByCreatedDateDesc(chatId: Long): Message?
-
 }
 
 @Repository
@@ -118,5 +124,10 @@ interface MessageStatusRepository : BaseRepository<MessageStatus> {
         @Param("messageIds") messageIds: List<Long>,
         @Param("readAt") readAt: Date
     )
+
+}
+
+@Repository
+interface FileRepository : BaseRepository<FileEntity>{
 
 }

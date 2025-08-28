@@ -33,5 +33,7 @@ enum class MessageType {
     FILE,
     AUDIO,
     LOCATION,
-    POLL
+    POLL,
+    DOCUMENT,
+    OTHER
 }

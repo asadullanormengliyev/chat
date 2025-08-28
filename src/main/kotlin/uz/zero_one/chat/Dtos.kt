@@ -1,6 +1,7 @@
 package uz.zero_one.chat
 
 import com.fasterxml.jackson.annotation.JsonProperty
+import org.springframework.web.multipart.MultipartFile
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.util.Date
@@ -112,7 +113,7 @@ data class MessageResponseDto(
 }
 
 data class AddMembersRequestDto(
-    val ids: List<Long>
+    val members: Set<Long>
 )
 
 data class ChatUserDto(
@@ -153,24 +154,21 @@ data class ChatListItemDto(
     val chatId: Long,
     val chatName: String?,
     val chatType: ChatType,
-    val lastMessage: String?,
-    val lastMessageAt: LocalDateTime?,
+    val lastMessage: Message?,
     val unreadCount: Long,
-    val chatImageUrl: String? = null
+    val chatImageUrl: String? = null,
+    val lastMessageAt: Date? = null
 ) {
     companion object {
-        fun from(chat: Chat, message: Message?, unreadCount: Long): ChatListItemDto {
+        fun from(chat: Chat, lastMessage: Message?, unreadCount: Long): ChatListItemDto {
             return ChatListItemDto(
                 chatId = chat.id!!,
-                chatName = chat.groupName ?: message?.sender?.firstName,
+                chatName = chat.groupName ?: lastMessage?.sender?.firstName,
                 chatType = chat.chatType,
-                lastMessage = message?.content,
-                lastMessageAt = message?.createdDate
-                    ?.toInstant()
-                    ?.atZone(ZoneId.systemDefault())
-                    ?.toLocalDateTime(),
+                lastMessage = lastMessage,
                 unreadCount = unreadCount,
-                chatImageUrl = chat.avatarUrl ?:message?.sender?.avatarUrl
+                chatImageUrl = chat.avatarUrl ?:lastMessage?.sender?.avatarUrl,
+                lastMessageAt = lastMessage?.createdDate
             )
         }
     }
@@ -185,4 +183,16 @@ data class EditMessageRequestDto(
 data class DeleteMessageRequestDto(
     val chatId: Long,
     val messageIds: List<Long>
+)
+
+data class CreatePublicChatRequestDto(
+    val groupName: String,
+    val file: MultipartFile?,
+    val membersRequestDto: AddMembersRequestDto
+)
+
+data class FileResponseDto(
+    val id: Long,
+    val fileUrl: String,
+    val messageType: MessageType
 )

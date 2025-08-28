@@ -11,6 +11,7 @@ import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
 import jakarta.persistence.ManyToOne
 import jakarta.persistence.MappedSuperclass
+import jakarta.persistence.OneToOne
 import jakarta.persistence.Table
 import jakarta.persistence.Temporal
 import jakarta.persistence.TemporalType
@@ -52,7 +53,9 @@ class Chat(
     val chatType: ChatType,
     val groupName: String?,
     val avatarUrl: String?,
-    val avatarHash: String?,
+    val avatarHash: String? = null,
+    @OneToOne
+    var lastMessage: Message? = null
 ) : BaseEntity()
 
 @Entity
@@ -65,7 +68,6 @@ class ChatMember(
     @Enumerated(EnumType.STRING)
     var role: MemberRole = MemberRole.MEMBER,
     var joinedAt: LocalDateTime = LocalDateTime.now(),
-    var lastMessageAt: LocalDateTime? = null,
     var deletedAt: LocalDateTime? = null
 ) : BaseEntity()
 
@@ -97,3 +99,16 @@ class MessageStatus(
     var isRead: Boolean = false,
     var readAt: LocalDateTime? = null
 ) : BaseEntity()
+
+
+@Entity
+@Table(name = "files")
+class FileEntity(
+    var originalName: String,
+    var fileUrl: String,
+    var size: Long,
+    var extension: String,
+    @Enumerated(EnumType.STRING)
+    var messageType: MessageType
+) : BaseEntity()
+

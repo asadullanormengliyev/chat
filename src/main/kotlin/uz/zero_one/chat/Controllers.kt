@@ -45,6 +45,7 @@ class UserController(private val userService: UserServiceImpl){
 
     @PutMapping("/{id}/update")
     fun updateUser(@PathVariable id: Long, @RequestPart("data") request: UserUpdateRequestDto, @RequestPart("file", required = false) file: MultipartFile?) {
+        println("Update")
         userService.updateUser(id, request, file)
     }
 
@@ -77,8 +78,8 @@ class ChatController(private val chatService: ChatServiceImpl){
     }
 
     @PostMapping
-    fun createPublicChat(@RequestParam groupName: String,@RequestParam("file", required = false) file: MultipartFile?){
-        chatService.createPublicChat(groupName,file)
+    fun createPublicChat(@RequestBody requestDto: CreatePublicChatRequestDto){
+        chatService.createPublicChat(requestDto)
     }
 
     @PostMapping("/add-members/{chatId}")
@@ -87,13 +88,8 @@ class ChatController(private val chatService: ChatServiceImpl){
     }
 
     @GetMapping("/users")
-    fun getChats(): List<ChatListItemDto> {
-        return chatService.getChatList()
-    }
-
-    @PostMapping("/file/uploads")
-    fun saveFile(@RequestParam("file") file: MultipartFile): FileUploadResponseDto{
-        return chatService.saveFile(file)
+    fun getChats(pageable: Pageable): Page<ChatListItemDto> {
+        return chatService.getChatList(pageable)
     }
 
     @MessageMapping("/chat.read")
@@ -119,5 +115,9 @@ class ChatController(private val chatService: ChatServiceImpl){
         chatService.deleteMessage(requestDto,username)
     }
 
+    @PostMapping("/upload")
+    fun uploadFile(@RequestParam("file") file: MultipartFile): FileResponseDto {
+        return chatService.saveFile(file)
+    }
 }
 
