@@ -338,13 +338,11 @@ class ChatServiceImpl(
 
     override fun getChatList(pageable: Pageable): Page<ChatListResponseDto> {
         val userId = getCurrentUserId()
-        val chats = chatRepository.findChatsWithMembers(userId, pageable)
-        return chats.map { chat ->
+        val chatMembers = chatMemberRepository.findByUserId(userId, pageable)
+        return chatMembers.map { cm ->
+            val chat = cm.chat
             val unreadCount = messageStatusRepository.countUnreadMessages(userId, chat.id!!)
-             val user = if (chat.chatType == ChatType.PRIVATE) {
-                 chat.members.first { it.user.id != userId }.user
-             } else null
-             ChatListResponseDto.from(chat,chat.lastMessage,unreadCount,user)
+            ChatListResponseDto.from(chat, chat.lastMessage, unreadCount,cm.user)
         }
     }
 
