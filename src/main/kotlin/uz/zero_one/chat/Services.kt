@@ -341,8 +341,13 @@ class ChatServiceImpl(
         val chatMembers = chatMemberRepository.findByUserId(userId, pageable)
         return chatMembers.map { cm ->
             val chat = cm.chat
+            println("ChatMemberlarUser ${cm.user} + ChatMemberChat = ${chat.id}" )
             val unreadCount = messageStatusRepository.countUnreadMessages(userId, chat.id!!)
-            ChatListResponseDto.from(chat, chat.lastMessage, unreadCount,cm.user)
+            val otherUser = if (chat.chatType == ChatType.PRIVATE) {
+                chat.members.firstOrNull { it.user.id != userId }?.user
+            } else null
+            println("OtherUser = $otherUser")
+            ChatListResponseDto.from(chat, chat.lastMessage, unreadCount, otherUser)
         }
     }
 

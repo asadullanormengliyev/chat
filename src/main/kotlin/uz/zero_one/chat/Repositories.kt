@@ -66,9 +66,9 @@ interface UserRepository : BaseRepository<User> {
     fun findByUsernameAndDeletedFalse(username: String): User?
     @Query("""
     select u from ChatMember cm
-    join cm.user u
-    where cm.chat.id = :chatId and cm.deleted = false
-""")
+        join cm.user u
+        where cm.chat.id = :chatId and cm.deleted = false
+    """)
     fun findUsersByChatId(@Param("chatId") chatId: Long): List<User>
 
 }
@@ -86,6 +86,17 @@ interface ChatRepository : BaseRepository<Chat> {
     )
     fun findPrivateChat(userId: Long, currentUserId: Long): Chat?
 
+    @Query("""
+            select distinct c
+            from Chat c
+            inner join ChatMember cm on c.id = cm.chat.id
+            where cm.user.id = :userId
+              and c.deleted = false
+              and cm.deletedAt is null
+            """)
+    fun getUserChats(@Param("userId") userId: Long, pageable: Pageable): Page<Chat>
+
+
 }
 
 @Repository
@@ -93,8 +104,6 @@ interface ChatMemberRepository : BaseRepository<ChatMember> {
    fun findByChatIdAndDeletedFalse(id: Long): List<ChatMember>
     fun findByChatIdAndUserId(chatId: Long,userId: Long): ChatMember?
     fun existsByChatIdAndUserId(chatId: Long,userId: Long): Boolean
-
-    fun findByUserIdAndDeletedFalse(userId: Long): List<ChatMember>
     @Query("""
             select cm
             from ChatMember cm
@@ -102,7 +111,7 @@ interface ChatMemberRepository : BaseRepository<ChatMember> {
               and cm.deletedAt is null
               and cm.chat.deleted = false
         """)
-    fun findByUserId(@Param("userId") userId: Long, pageable: Pageable): Page<ChatMember>
+    fun findByUserId(@Param("userId") userId: Long,pageable: Pageable): Page<ChatMember>
 
 }
 

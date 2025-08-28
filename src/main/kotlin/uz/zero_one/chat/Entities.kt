@@ -55,6 +55,8 @@ class Chat(
     val avatarUrl: String?,
     @OneToOne
     var lastMessage: Message? = null,
+    @OneToMany(mappedBy = "chat")
+    val members: MutableList<ChatMember> = mutableListOf()
 ) : BaseEntity()
 
 @Entity
