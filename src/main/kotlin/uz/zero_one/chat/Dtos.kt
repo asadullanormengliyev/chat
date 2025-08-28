@@ -3,7 +3,6 @@ package uz.zero_one.chat
 import com.fasterxml.jackson.annotation.JsonProperty
 import org.springframework.web.multipart.MultipartFile
 import java.time.LocalDateTime
-import java.time.ZoneId
 import java.util.Date
 
 data class BaseMessage(val code: Int,val message: String?)
@@ -75,7 +74,6 @@ data class MessageRequestDto(
     val messageType: MessageType,
     val content: String? = null,
     val fileUrl: String? = null,
-    val fileHash: String? = null,
     val latitude: Double? = null,
     val longitude: Double? = null,
     val replyToId: Long? = null
@@ -88,7 +86,6 @@ data class MessageResponseDto(
     val messageType: MessageType?,
     val content: String?,
     val fileUrl: String?,
-    val fileHash: String?,
     val latitude: Double?,
     val longitude: Double?,
     val replyToId: Long?,
@@ -103,7 +100,6 @@ data class MessageResponseDto(
                 messageType = message.messageType,
                 content = message.content,
                 fileUrl = message.fileUrl,
-                fileHash = message.fileHash,
                 latitude = message.latitude,
                 longitude = message.longitude,
                 replyToId = message.replyTo?.id,
@@ -128,11 +124,6 @@ data class UserDto(
     val firstName: String,
     val userName: String,
     val avatarUrl: String?
-)
-
-data class FileUploadResponseDto(
-    val fileUrl: String,
-    val fileHash: String
 )
 
 data class UnreadCountDto(
@@ -196,3 +187,37 @@ data class FileResponseDto(
     val fileUrl: String,
     val messageType: MessageType
 )
+
+data class ChatListResponseDto(
+    val chatId: Long,
+    val chatName: String?,
+    val chatType: ChatType,
+    val chatImageUrl: String?,
+    val lastMessage: Message?,
+    val lastMessageAt: Date?,
+    val unreadCount: Long,
+    val userId: Long? = null,
+    val status: UserStatus? = null,
+    val lastSeen: LocalDateTime? = null
+){
+    companion object{
+        fun from(chat: Chat, lastMessage: Message?, unreadCount: Long, user: User?): ChatListResponseDto {
+            return ChatListResponseDto(
+                chatId = chat.id!!,
+                chatName = if (chat.chatType == ChatType.GROUP) {
+                    chat.groupName
+                } else {
+                    user?.firstName
+                },
+                chatType = chat.chatType,
+                chatImageUrl = chat.avatarUrl ?: user?.avatarUrl,
+                lastMessage = lastMessage,
+                lastMessageAt = lastMessage?.createdDate,
+                unreadCount = unreadCount,
+                userId = user?.id,
+                status = user?.status,
+                lastSeen = user?.lastSeen
+            )
+        }
+    }
+}

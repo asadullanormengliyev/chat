@@ -86,8 +86,16 @@ interface ChatRepository : BaseRepository<Chat> {
     )
     fun findPrivateChat(userId: Long, currentUserId: Long): Chat?
 
-    @Query("""select cm.chat from ChatMember cm inner join Chat c on cm.chat.id = c.id and cm.user.id =:userId and c.deleted = false and cm.deleted = false""")
-    fun findByUserIdAndChat(@Param("userId") userId: Long,pageable: Pageable): Page<Chat>
+    @Query("""
+            select distinct c 
+            from Chat c
+            join fetch c.members cm
+            join fetch cm.user u
+            where cm.user.id = :userId 
+              and c.deleted = false 
+              and cm.deleted = false
+            """)
+    fun findChatsWithMembers(@Param("userId") userId: Long, pageable: Pageable): Page<Chat>
 
 }
 

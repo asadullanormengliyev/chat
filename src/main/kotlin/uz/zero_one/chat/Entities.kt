@@ -11,6 +11,7 @@ import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
 import jakarta.persistence.ManyToOne
 import jakarta.persistence.MappedSuperclass
+import jakarta.persistence.OneToMany
 import jakarta.persistence.OneToOne
 import jakarta.persistence.Table
 import jakarta.persistence.Temporal
@@ -39,7 +40,6 @@ class User(
     @Column(unique = true)
     var username: String,
     var avatarUrl: String?,
-    var avatarHash: String?,
     var bio: String?,
     var authDate: Long,
     @Enumerated(EnumType.STRING)
@@ -53,9 +53,10 @@ class Chat(
     val chatType: ChatType,
     val groupName: String?,
     val avatarUrl: String?,
-    val avatarHash: String? = null,
     @OneToOne
-    var lastMessage: Message? = null
+    var lastMessage: Message? = null,
+    @OneToMany(mappedBy = "chat")
+    val members: MutableList<ChatMember> = mutableListOf()
 ) : BaseEntity()
 
 @Entity
@@ -81,7 +82,6 @@ class Message(
     var messageType: MessageType,
     var content: String? = null,
     var fileUrl: String? = null,
-    var fileHash: String? = null,
     var latitude: Double? = null,
     var longitude: Double? = null,
     @ManyToOne
@@ -107,7 +107,7 @@ class FileEntity(
     var originalName: String,
     var fileUrl: String,
     var size: Long,
-    var extension: String,
+    var extension: String?,
     @Enumerated(EnumType.STRING)
     var messageType: MessageType
 ) : BaseEntity()

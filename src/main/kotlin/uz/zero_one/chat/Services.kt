@@ -17,11 +17,9 @@ import org.springframework.web.socket.messaging.AbstractSubProtocolEvent
 import org.springframework.web.socket.messaging.SessionConnectEvent
 import org.springframework.web.socket.messaging.SessionDisconnectEvent
 import java.io.File
-import java.nio.file.AccessDeniedException
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.nio.file.StandardCopyOption
-import java.security.MessageDigest
 import java.text.SimpleDateFormat
 import java.time.LocalDateTime
 import java.util.Date
@@ -44,7 +42,7 @@ interface ChatService {
     fun markMessagesAsRead(dto: ReadMessageRequestDto, username: String)
     fun getAllMessage(chatId: Long, pageable: Pageable): Page<MessageResponseDto>
     fun editMessage(chatId: Long, messageId: Long, newContent: String?, username: String)
-    fun getChatList(pageable: Pageable): Page<ChatListItemDto>
+    fun getChatList(pageable: Pageable): Page<ChatListResponseDto>
     fun deletedChatForMe(chatId: Long)
     fun deletedChatForEveryone(chatId: Long)
     fun deleteMessage(requestDto: DeleteMessageRequestDto, username: String)
@@ -69,7 +67,6 @@ class UserServiceImpl(
                     username = request.username ?: "unknown_${request.telegramId}",
                     avatarUrl = null,
                     authDate = request.authDate,
-                    avatarHash = null,
                     bio = null
                 )
             )
@@ -95,12 +92,7 @@ class UserServiceImpl(
             val dest = File(uploadDir, newFileName)
             dest.parentFile.mkdirs()
             file.transferTo(dest)
-
-            val bytes = Files.readAllBytes(dest.toPath())
-            val digest = MessageDigest.getInstance("SHA-256")
-            val hash = digest.digest(bytes).joinToString("") { "%02x".format(it) }
             user.avatarUrl = dest.path
-            user.avatarHash = hash
         }
         userRepository.save(user)
     }
@@ -160,7 +152,7 @@ class ChatServiceImpl(
         val user = userRepository.findByIdAndDeletedFalse(receiverId) ?: throw UserNotFoundException(receiverId)
 
         val chat = chatRepository.save(
-            Chat(chatType = ChatType.PRIVATE, null, null, null,null)
+            Chat(chatType = ChatType.PRIVATE, null, null, null)
         )
         chatMemberRepository.save(ChatMember(chat = chat, user = sender))
         chatMemberRepository.save(ChatMember(chat = chat, user = user))
@@ -180,7 +172,7 @@ class ChatServiceImpl(
         val replyMessage = messageDto.replyToId?.let { messageRepository.findByIdOrNull(it) }
         println("Chatid = ${chat.id}")
         println("SenderUsername = ${sender.username}")
-        val messageType = resolveMessageType(messageDto)
+        val messageType = messageType(messageDto)
         val message = messageRepository.save(
             Message(
                 chat = chat,
@@ -188,7 +180,6 @@ class ChatServiceImpl(
                 messageType = messageType,
                 content = messageDto.content,
                 fileUrl = messageDto.fileUrl,
-                fileHash = messageDto.fileHash,
                 latitude = messageDto.latitude,
                 longitude = messageDto.longitude,
                 replyTo = replyMessage
@@ -242,10 +233,10 @@ class ChatServiceImpl(
         }
     }
 
-    private fun resolveMessageType(dto: MessageRequestDto): MessageType {
+    private fun messageType(dto: MessageRequestDto): MessageType {
         return when {
             dto.latitude != null && dto.longitude != null -> MessageType.LOCATION
-            dto.fileUrl != null && dto.fileHash != null -> when {
+            dto.fileUrl != null  -> when {
                 dto.fileUrl.endsWith(".jpg") || dto.fileUrl.endsWith(".png") -> MessageType.IMAGE
                 dto.fileUrl.endsWith(".mp4") -> MessageType.VIDEO
                 dto.fileUrl.endsWith(".mp3") -> MessageType.AUDIO
@@ -345,12 +336,16 @@ class ChatServiceImpl(
         }
     }
 
-    override fun getChatList(pageable: Pageable): Page<ChatListItemDto> {
+    override fun getChatList(pageable: Pageable): Page<ChatListResponseDto> {
         val userId = getCurrentUserId()
-        val chats = chatRepository.findByUserIdAndChat(userId, pageable)
+        val chats = chatRepository.findChatsWithMembers(userId, pageable)
         return chats.map { chat ->
             val unreadCount = messageStatusRepository.countUnreadMessages(userId, chat.id!!)
-            ChatListItemDto.from(chat, chat.lastMessage, unreadCount)        }
+             val user = if (chat.chatType == ChatType.PRIVATE) {
+                 chat.members.first { it.user.id != userId }.user
+             } else null
+             ChatListResponseDto.from(chat,chat.lastMessage,unreadCount,user)
+        }
     }
 
     override fun deletedChatForMe(chatId: Long) {
@@ -397,7 +392,7 @@ class ChatServiceImpl(
     }
 
     fun saveFile(file: MultipartFile): FileResponseDto {
-        val extension = file.originalFilename?.substringAfterLast(".")?.lowercase() ?: "bin"
+        val extension = file.originalFilename?.substringAfterLast(".")?.lowercase()
         val newFile = "${UUID.randomUUID()}.$extension"
         val uploadPath = Paths.get("uploads/files")
         val savedFile = uploadPath.resolve(newFile)
@@ -417,7 +412,7 @@ class ChatServiceImpl(
         return FileResponseDto(entity.id!!, entity.fileUrl, entity.messageType)
     }
 
-    private fun detectFileType(extension: String): MessageType {
+    private fun detectFileType(extension: String?): MessageType {
         return when (extension) {
             "jpg", "jpeg", "png", "gif" -> MessageType.IMAGE
             "mp4", "mov", "avi" -> MessageType.VIDEO

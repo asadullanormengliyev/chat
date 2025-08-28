@@ -88,7 +88,7 @@ class ChatController(private val chatService: ChatServiceImpl){
     }
 
     @GetMapping("/users")
-    fun getChats(pageable: Pageable): Page<ChatListItemDto> {
+    fun getChats(pageable: Pageable): Page<ChatListResponseDto> {
         return chatService.getChatList(pageable)
     }
 
