@@ -393,6 +393,7 @@ class ChatServiceImpl(
 
     @Transactional
     override fun deleteMessage(requestDto: DeleteMessageRequestDto, username: String) {
+        println("Username = $username")
         val chat = chatRepository.findByIdAndDeletedFalse(requestDto.chatId) ?: throw ChatNotFoundException(requestDto.chatId)
         val user = userRepository.findByUsernameAndDeletedFalse(username) ?: throw UsernameNotFoundException(username)
         val messages = messageRepository.findAllById(requestDto.messageIds)

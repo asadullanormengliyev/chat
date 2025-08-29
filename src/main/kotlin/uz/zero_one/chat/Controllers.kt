@@ -127,7 +127,7 @@ class ChatController(private val chatService: ChatServiceImpl){
         return chatService.getGroupChatDetails(chatId)
     }
 
-    @DeleteMapping("/{chatId}/delete")
+    @MessageMapping("/chat.delete")
     fun deleteChat(requestDto: DeleteChatRequestDto,principal: Principal){
         chatService.deleteChat(requestDto,principal.name)
     }
