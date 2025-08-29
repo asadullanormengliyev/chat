@@ -418,28 +418,23 @@ class ChatServiceImpl(
         }
         println("TrashList")
         messageRepository.trashList(requestDto.messageIds)
-        val deleteMap = mapOf(
-            "chatId" to chat.id,
-            "messagesId" to requestDto.messageIds
-        )
 
-        println("Response ${deleteMap.get("messagesId")}")
         if (chat.chatType == ChatType.GROUP) {
             simpleMessagingTemplate.convertAndSend(
                 "/topic/chat.${chat.id}",
-                deleteMap
+                requestDto.messageIds
             )
-            println("Response group ${deleteMap.get("messagesId")}")
         } else {
             members.forEach { member ->
                 println("Qabul qiluvchi username = ${member.user.username}")
                 simpleMessagingTemplate.convertAndSendToUser(
                     member.user.username,
                     "/queue/delete",
-                    deleteMap
+                    requestDto.messageIds
                 )
+                println("RequestMessageIds = ${requestDto.messageIds}")
             }
-            println("Response private ${deleteMap.get("messagesId")}")
+
         }
     }
 
