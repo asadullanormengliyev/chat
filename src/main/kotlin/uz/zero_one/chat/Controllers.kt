@@ -1,7 +1,9 @@
 package uz.zero_one.chat
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
+import org.springframework.http.MediaType
 import org.springframework.messaging.handler.annotation.MessageMapping
 import org.springframework.stereotype.Controller
 import org.springframework.web.bind.annotation.*
@@ -44,9 +46,9 @@ class HtmlController {
 class UserController(private val userService: UserServiceImpl){
 
     @PutMapping("/{id}/update")
-    fun updateUser(@PathVariable id: Long, @RequestPart("data") request: UserUpdateRequestDto, @RequestPart("file", required = false) file: MultipartFile?) {
+    fun updateUser(@PathVariable id: Long,@ModelAttribute request: UserUpdateRequestDto) {
         println("Update")
-        userService.updateUser(id, request, file)
+        userService.updateUser(id, request, request.file)
     }
 
     @DeleteMapping("/{id}/delete")
@@ -68,7 +70,7 @@ class UserController(private val userService: UserServiceImpl){
 
 @RestController
 @RequestMapping("/api/v1/chats")
-class ChatController(private val chatService: ChatServiceImpl){
+class ChatController(private val chatService: ChatServiceImpl,private val objectMapper: ObjectMapper){
 
     @MessageMapping("/chat.sendMessage")
     fun sendMessage(requestDto: MessageRequestDto,principal: Principal) {
@@ -78,8 +80,10 @@ class ChatController(private val chatService: ChatServiceImpl){
     }
 
     @PostMapping
-    fun createPublicChat(@RequestBody requestDto: CreatePublicChatRequestDto){
-        chatService.createPublicChat(requestDto)
+    fun createPublicChat(
+        @ModelAttribute request: CreatePublicChatRequestDto
+    ): GetOneChatResponseDto {
+        return chatService.createPublicChat(request)
     }
 
     @PostMapping("/add-members/{chatId}")

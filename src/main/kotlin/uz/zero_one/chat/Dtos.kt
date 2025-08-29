@@ -27,7 +27,8 @@ data class JwtResponseDto(
 data class UserUpdateRequestDto(
     val firstName: String?,
     val username: String?,
-    val bio: String?
+    val bio: String?,
+    val file: MultipartFile?
 )
 
 data class GetOneUserResponseDto(
@@ -178,8 +179,8 @@ data class DeleteMessageRequestDto(
 
 data class CreatePublicChatRequestDto(
     val groupName: String,
-    val file: MultipartFile?,
-    val membersRequestDto: AddMembersRequestDto
+    val membersRequestDto: AddMembersRequestDto?,
+    val file: MultipartFile?
 )
 
 data class FileResponseDto(

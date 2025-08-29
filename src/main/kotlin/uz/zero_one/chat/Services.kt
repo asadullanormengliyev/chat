@@ -38,7 +38,7 @@ interface ChatService {
     fun createPrivateChat(senderId: Long, receiverId: Long): Chat
     fun sendMessage(messageDto: MessageRequestDto, username: String)
     fun createPublicChat(requestDto: CreatePublicChatRequestDto): GetOneChatResponseDto
-    fun addMembers(chatId: Long, requestDto: AddMembersRequestDto)
+    fun addMembers(chatId: Long, requestDto: AddMembersRequestDto?)
     fun markMessagesAsRead(dto: ReadMessageRequestDto, username: String)
     fun getAllMessage(chatId: Long, pageable: Pageable): Page<MessageResponseDto>
     fun editMessage(chatId: Long, messageId: Long, newContent: String?, username: String)
@@ -85,9 +85,8 @@ class UserServiceImpl(
         request.bio?.let { user.bio = it }
 
         if (file != null && !file.isEmpty) {
-            val timestamp = SimpleDateFormat("yyyy-MM-dd_HH-mm-ss").format(Date())
             val extension = file.originalFilename?.substringAfterLast(".")?.lowercase()
-            val newFileName = "${timestamp}.${extension}"
+            val newFileName = "${UUID.randomUUID()}.${extension}"
             val uploadDir = "uploads/avatars"
             val dest = File(uploadDir, newFileName)
             dest.parentFile.mkdirs()
@@ -251,8 +250,8 @@ class ChatServiceImpl(
     override fun createPublicChat(requestDto: CreatePublicChatRequestDto): GetOneChatResponseDto {
         val currentUserId = getCurrentUserId()
         val currentUser = userRepository.findByIdAndDeletedFalse(currentUserId) ?: throw UserNotFoundException(currentUserId)
-        val file = requestDto.file
         var avatarUrl: String? = null
+        val file = requestDto.file
         if ( file != null){
             val extension = file.originalFilename?.substringAfterLast(".")?.lowercase()
             val newFile = "${UUID.randomUUID()}.${extension}"
@@ -269,7 +268,7 @@ class ChatServiceImpl(
         return GetOneChatResponseDto.toResponse(chat)
     }
 
-    override fun addMembers(chatId: Long, requestDto: AddMembersRequestDto) {
+   override fun addMembers(chatId: Long, requestDto: AddMembersRequestDto?) {
         val currentUserId = getCurrentUserId()
         val chat = chatRepository.findByIdAndDeletedFalse(chatId) ?: throw ChatNotFoundException(chatId)
         val currentMember = chatMemberRepository.findByChatIdAndUserId(chatId, currentUserId)
@@ -277,7 +276,7 @@ class ChatServiceImpl(
         if (currentMember?.role != MemberRole.OWNER) {
             throw ChatAccessDeniedException(currentMember?.role?.name ?: " ")
         }
-        requestDto.members.forEach { dto ->
+        requestDto?.members?.forEach { dto ->
             val user = userRepository.findByIdAndDeletedFalse(dto) ?: throw UserNotFoundException(dto)
             if (!chatMemberRepository.existsByChatIdAndUserId(chatId, user.id!!)) {
                 chatMemberRepository.save(ChatMember(chat = chat, user = user, role = MemberRole.MEMBER))

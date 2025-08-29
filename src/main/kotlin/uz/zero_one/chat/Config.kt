@@ -1,5 +1,6 @@
 package uz.zero_one.chat
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.messaging.Message
@@ -116,5 +117,9 @@ class WebSocketConfig(private val userServiceImpl: UserServiceImpl) : WebSocketM
     }
 
 
+    @Bean
+    fun objectMapper(): ObjectMapper{
+        return ObjectMapper()
+    }
 }
 
