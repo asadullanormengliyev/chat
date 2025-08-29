@@ -1,9 +1,7 @@
 package uz.zero_one.chat
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
-import org.springframework.http.MediaType
 import org.springframework.messaging.handler.annotation.MessageMapping
 import org.springframework.stereotype.Controller
 import org.springframework.web.bind.annotation.*
@@ -70,7 +68,7 @@ class UserController(private val userService: UserServiceImpl){
 
 @RestController
 @RequestMapping("/api/v1/chats")
-class ChatController(private val chatService: ChatServiceImpl,private val objectMapper: ObjectMapper){
+class ChatController(private val chatService: ChatServiceImpl){
 
     @MessageMapping("/chat.sendMessage")
     fun sendMessage(requestDto: MessageRequestDto,principal: Principal) {

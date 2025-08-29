@@ -115,11 +115,5 @@ class WebSocketConfig(private val userServiceImpl: UserServiceImpl) : WebSocketM
             }
         })
     }
-
-
-    @Bean
-    fun objectMapper(): ObjectMapper{
-        return ObjectMapper()
-    }
 }
 
