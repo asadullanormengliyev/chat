@@ -198,14 +198,17 @@ class ChatServiceImpl(
 
         val response = MessageResponseDto.toResponse(message)
         if (chat.chatType == ChatType.GROUP) {
+            println("Guruppaga xabar keldi = ${chat.id}")
             simpleMessagingTemplate.convertAndSend("/topic/chat.${chat.id}", response)
             members.filter { it.user.id != sender.id }.forEach { member ->
+                println("Guruppadagi har bir userga yuborsih = ${member.user.username}")
                 val unreadCount = messageStatusRepository.countUnreadMessages(member.user.id!!, chat.id!!)
                 simpleMessagingTemplate.convertAndSendToUser(
                     member.user.username,
                     "/queue/chat-list",
                     ChatListItemDto.from(chat, message, unreadCount)
                 )
+                println("Har bir userga yuborlidi")
             }
         } else {
             members.forEach { member ->
@@ -399,7 +402,8 @@ class ChatServiceImpl(
         val user = userRepository.findByUsernameAndDeletedFalse(username) ?: throw UsernameNotFoundException(username)
         println("User = ${user.username}")
         val messages = messageRepository.findAllById(requestDto.messageIds)
-        println("Messages = ${messages.forEach { message -> println(message) }}")
+        println("Messages size = ${messages.size}")
+        println("Messages content = $messages")
         println("ReuestMessagesIds = ${requestDto.messageIds}")
         messages.forEach { message ->
             println("Forga kirdi")
@@ -413,6 +417,7 @@ class ChatServiceImpl(
             }
             println("DeleteMessage for dan chiqdi")
         }
+        println("TrashList")
         messageRepository.trashList(requestDto.messageIds)
         val deleteMap = mapOf(
             "chatId" to chat.id,
