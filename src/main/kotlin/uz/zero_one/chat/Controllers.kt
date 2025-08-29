@@ -126,5 +126,11 @@ class ChatController(private val chatService: ChatServiceImpl){
     fun getGroupChatDetails(@PathVariable chatId: Long): GroupChatResponseDto {
         return chatService.getGroupChatDetails(chatId)
     }
+
+    @DeleteMapping("/{chatId}/delete")
+    fun deleteChat(requestDto: DeleteChatRequestDto,principal: Principal){
+        chatService.deleteChat(requestDto,principal.name)
+    }
+
 }
 

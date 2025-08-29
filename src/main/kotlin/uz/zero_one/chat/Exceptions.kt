@@ -82,3 +82,8 @@ class MessageChatMismatchException(val msg: String?) :  DemoException(){
     override fun errorType() = ErrorCode.MESSAGE_CHAT_MISMATCH_EXCEPTION
     override fun getErrorMessageArguments(): Array<Any?> = arrayOf(msg)
 }
+
+class ChatNotDeletedPermissionException(val msg: String?) : DemoException(){
+    override fun errorType() = ErrorCode.CHAT_NOT_DELETED_PERMISSION_EXCEPTION
+    override fun getErrorMessageArguments(): Array<Any?> = arrayOf(msg)
+}

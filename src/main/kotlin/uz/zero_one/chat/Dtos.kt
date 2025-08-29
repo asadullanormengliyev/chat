@@ -256,3 +256,7 @@ data class MemberDto(
     val avatarUrl: String?
 )
 
+data class DeleteChatRequestDto(
+    val chatId: Long,
+    val deleted: Boolean
+)

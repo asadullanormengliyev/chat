@@ -20,7 +20,6 @@ import java.io.File
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.nio.file.StandardCopyOption
-import java.text.SimpleDateFormat
 import java.time.LocalDateTime
 import java.util.Date
 import java.util.UUID
@@ -43,10 +42,9 @@ interface ChatService {
     fun getAllMessage(chatId: Long, pageable: Pageable): Page<MessageResponseDto>
     fun editMessage(chatId: Long, messageId: Long, newContent: String?, username: String)
     fun getChatList(pageable: Pageable): Page<ChatListResponseDto>
-    fun deletedChatForMe(chatId: Long)
-    fun deletedChatForEveryone(chatId: Long)
     fun deleteMessage(requestDto: DeleteMessageRequestDto, username: String)
     fun getGroupChatDetails(chatId: Long): GroupChatResponseDto
+    fun deleteChat(requestDto: DeleteChatRequestDto,username: String)
 }
 
 @Service
@@ -116,7 +114,6 @@ class UserServiceImpl(
 
     override fun tokenMe(): GetOneUserResponseDto {
         val currentUserId = getCurrentUserId()
-        println("CurrentUser = $currentUserId")
         val user = userRepository.findByIdAndDeletedFalse(currentUserId) ?: throw UserNotFoundException(currentUserId)
         return GetOneUserResponseDto.toResponse(user)
     }
@@ -125,7 +122,6 @@ class UserServiceImpl(
         val claims = jwtService.accessTokenClaims(token)
         val username = claims.subject
         val authorities = emptyList<GrantedAuthority>()
-        println("getAuthenticationFromToken!!!!!")
         val auth = UsernamePasswordAuthenticationToken(username, token, authorities)
         auth.details = (claims["userId"] as Number).toLong()
         return auth
@@ -202,8 +198,8 @@ class ChatServiceImpl(
 
         val response = MessageResponseDto.toResponse(message)
         if (chat.chatType == ChatType.GROUP) {
+            simpleMessagingTemplate.convertAndSend("/topic/chat.${chat.id}", response)
             members.filter { it.user.id != sender.id }.forEach { member ->
-                simpleMessagingTemplate.convertAndSend("/topic/chat.${chat.id}", response)
                 val unreadCount = messageStatusRepository.countUnreadMessages(member.user.id!!, chat.id!!)
                 simpleMessagingTemplate.convertAndSendToUser(
                     member.user.username,
@@ -349,15 +345,50 @@ class ChatServiceImpl(
         }
     }
 
-    override fun deletedChatForMe(chatId: Long) {
-        val currentUserId = getCurrentUserId()
-        val member = chatMemberRepository.findByChatIdAndUserId(chatId, currentUserId) ?: throw ChatNotFoundException(chatId)
-        member.deletedAt = LocalDateTime.now()
-        chatMemberRepository.trash(member.id!!)
-    }
+   override fun deleteChat(requestDto: DeleteChatRequestDto,username: String) {
+        val chat = chatRepository.findByIdAndDeletedFalse(requestDto.chatId)
+            ?: throw ChatNotFoundException(requestDto.chatId)
 
-    override fun deletedChatForEveryone(chatId: Long) {
-        TODO("Not yet implemented")
+       val currentUser = userRepository.findByUsernameAndDeletedFalse(username)?:throw UsernameNotFoundException(username)
+       val members = chatMemberRepository.findAllByChatIdAndDeletedFalse(requestDto.chatId)
+
+       if (requestDto.deleted) {
+           if (chat.chatType == ChatType.PRIVATE) {
+               chatRepository.trash(chat.id!!)
+               members.forEach { member ->
+                   member.deletedAt = LocalDateTime.now()
+                   chatMemberRepository.trash(member.id!!)
+                       simpleMessagingTemplate.convertAndSendToUser(
+                           member.user.username,
+                           "/queue/chat-delete",
+                           chat.id!!
+                       )
+               }
+           }
+           else if (chat.chatType == ChatType.GROUP) {
+               val currentMember = members.firstOrNull { it.user.id == currentUser.id }
+                   ?: throw ChatNotFoundException(requestDto.chatId)
+               if (currentMember.role != MemberRole.OWNER && currentMember.role != MemberRole.ADMIN) {
+                   throw ChatNotDeletedPermissionException(currentUser.firstName)
+               }
+               chatRepository.trash(chat.id!!)
+               members.forEach { member ->
+                   member.deletedAt = LocalDateTime.now()
+                   chatMemberRepository.trash(member.id!!)
+                   simpleMessagingTemplate.convertAndSendToUser(
+                       member.user.username,
+                       "/queue/chat-delete",
+                       chat.id!!
+                   )
+               }
+           }
+       } else {
+           val currentMember = members.firstOrNull { it.user.id == currentUser.id }
+               ?: throw ChatNotFoundException(requestDto.chatId)
+           currentMember.deletedAt = LocalDateTime.now()
+           chatMemberRepository.trash(currentMember.id!!)
+       }
+
     }
 
     @Transactional
@@ -372,23 +403,28 @@ class ChatServiceImpl(
             if (message.sender.id != user.id) {
                 throw MessageAccessDeniedException(message.sender.username)
             }
+            println("DeleteMessage for dan chiqdi")
         }
         messageRepository.trashList(requestDto.messageIds)
         val deleteMap = mapOf(
             "chatId" to chat.id,
             "messagesId" to requestDto.messageIds
         )
+
+        println("Response ${deleteMap.get("messagesId")}")
         if (chat.chatType == ChatType.GROUP) {
             simpleMessagingTemplate.convertAndSend(
                 "/topic/chat.${chat.id}",
                 deleteMap
             )
+            println("Response group ${deleteMap.get("messagesId")}")
         } else {
             simpleMessagingTemplate.convertAndSendToUser(
                 username,
                 "/queue/delete",
                 deleteMap
             )
+            println("Response private ${deleteMap.get("messagesId")}")
         }
     }
 
