@@ -121,5 +121,10 @@ class ChatController(private val chatService: ChatServiceImpl){
     fun uploadFile(@RequestParam("file") file: MultipartFile): FileResponseDto {
         return chatService.saveFile(file)
     }
+
+    @GetMapping("/{chatId}/group")
+    fun getGroupChatDetails(@PathVariable chatId: Long): GroupChatResponseDto {
+        return chatService.getGroupChatDetails(chatId)
+    }
 }
 

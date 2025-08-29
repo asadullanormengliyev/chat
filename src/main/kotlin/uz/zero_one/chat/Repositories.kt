@@ -112,7 +112,6 @@ interface ChatMemberRepository : BaseRepository<ChatMember> {
               and cm.chat.deleted = false
         """)
     fun findByUserId(@Param("userId") userId: Long,pageable: Pageable): Page<ChatMember>
-
 }
 
 @Repository

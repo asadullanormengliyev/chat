@@ -46,6 +46,7 @@ interface ChatService {
     fun deletedChatForMe(chatId: Long)
     fun deletedChatForEveryone(chatId: Long)
     fun deleteMessage(requestDto: DeleteMessageRequestDto, username: String)
+    fun getGroupChatDetails(chatId: Long): GroupChatResponseDto
 }
 
 @Service
@@ -389,6 +390,15 @@ class ChatServiceImpl(
                 deleteMap
             )
         }
+    }
+
+    override fun getGroupChatDetails(chatId: Long): GroupChatResponseDto {
+        val chat = chatRepository.findByIdAndDeletedFalse(chatId) ?: throw ChatNotFoundException(chatId)
+        val members = chatMemberRepository.findByChatIdAndDeletedFalse(chatId)
+       val memberDto = members.map { member ->
+            MemberDto(member.user.id!!,member.user.firstName,member.user.avatarUrl)
+       }
+        return GroupChatResponseDto(chat.id!!,chat.groupName,chat.avatarUrl,memberDto)
     }
 
     fun saveFile(file: MultipartFile): FileResponseDto {

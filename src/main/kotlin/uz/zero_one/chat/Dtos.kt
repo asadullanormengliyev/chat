@@ -243,3 +243,16 @@ data class MessageDto(
     }
 }
 
+data class GroupChatResponseDto(
+    val id: Long,
+    val groupName: String?,
+    val avatarUrl: String?,
+    val members: List<MemberDto>
+)
+
+data class MemberDto(
+    val id: Long,
+    val fullName: String,
+    val avatarUrl: String?
+)
+
