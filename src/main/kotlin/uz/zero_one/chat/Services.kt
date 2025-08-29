@@ -395,13 +395,20 @@ class ChatServiceImpl(
     override fun deleteMessage(requestDto: DeleteMessageRequestDto, username: String) {
         println("Username = $username")
         val chat = chatRepository.findByIdAndDeletedFalse(requestDto.chatId) ?: throw ChatNotFoundException(requestDto.chatId)
+        println("Chat = ${chat.id}")
         val user = userRepository.findByUsernameAndDeletedFalse(username) ?: throw UsernameNotFoundException(username)
+        println("User = ${user.username}")
         val messages = messageRepository.findAllById(requestDto.messageIds)
+        println("Messages = ${messages.forEach { message -> println(message) }}")
+        println("ReuestMessagesIds = ${requestDto.messageIds}")
         messages.forEach { message ->
+            println("Forga kirdi")
             if (message.chat.id != chat.id) {
+                println("Messageni chatId teng emas chatId ga")
                 throw MessageChatMismatchException(message.content)
             }
             if (message.sender.id != user.id) {
+                println("Delete user ")
                 throw MessageAccessDeniedException(message.sender.username)
             }
             println("DeleteMessage for dan chiqdi")

@@ -113,6 +113,7 @@ class ChatController(private val chatService: ChatServiceImpl){
 
     @MessageMapping("/message.delete")
     fun deleteMessage(requestDto: DeleteMessageRequestDto,principal: Principal){
+        println("delete ga kirdi")
         val username = principal.name
         chatService.deleteMessage(requestDto,username)
     }
