@@ -60,7 +60,7 @@ class SecurityConfig(private val jwtAuthenticationFilter: JwtAuthenticationFilte
     @Bean
     fun corsConfigurationSource(): CorsConfigurationSource {
         val configuration = CorsConfiguration()
-        configuration.allowedOrigins = listOf("https://ca271b5462e5.ngrok-free.app","https://sage-sunburst-60ba08.netlify.app","https://chat-h80l.onrender.com","https://6120d8c2a946.ngrok-free.app","http://localhost:5173")
+        configuration.allowedOrigins = listOf("https://c317f07d104a.ngrok-free.app","https://sage-sunburst-60ba08.netlify.app","https://chat-h80l.onrender.com","https://6120d8c2a946.ngrok-free.app","http://localhost:5173")
         configuration.allowedMethods = listOf("GET", "POST", "PUT", "DELETE", "OPTIONS")
         configuration.allowedHeaders = listOf("*")
         configuration.allowCredentials = true
@@ -77,7 +77,7 @@ class WebSocketConfig(private val userServiceImpl: UserServiceImpl) : WebSocketM
 
     override fun registerStompEndpoints(registry: StompEndpointRegistry) {
         registry.addEndpoint("/chat")
-            .setAllowedOriginPatterns("https://ca271b5462e5.ngrok-free.app","https://sage-sunburst-60ba08.netlify.app","https://chat-h80l.onrender.com","https://6120d8c2a946.ngrok-free.app","http://localhost:5173")
+            .setAllowedOriginPatterns("https://c317f07d104a.ngrok-free.app","https://sage-sunburst-60ba08.netlify.app","https://chat-h80l.onrender.com","https://6120d8c2a946.ngrok-free.app","http://localhost:5173")
              .withSockJS()
     }
 
