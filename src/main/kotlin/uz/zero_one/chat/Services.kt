@@ -400,6 +400,7 @@ class ChatServiceImpl(
         val user = userRepository.findByUsernameAndDeletedFalse(username) ?: throw UsernameNotFoundException(username)
         println("User = ${user.username}")
         val messages = messageRepository.findAllById(requestDto.messageIds)
+        val members = chatMemberRepository.findByChatIdAndDeletedFalse(chat.id!!)
         println("Messages size = ${messages.size}")
         println("Messages content = $messages")
         println("ReuestMessagesIds = ${requestDto.messageIds}")
@@ -430,11 +431,14 @@ class ChatServiceImpl(
             )
             println("Response group ${deleteMap.get("messagesId")}")
         } else {
-            simpleMessagingTemplate.convertAndSendToUser(
-                username,
-                "/queue/delete",
-                deleteMap
-            )
+            members.forEach { member ->
+                println("Qabul qiluvchi username = ${member.user.username}")
+                simpleMessagingTemplate.convertAndSendToUser(
+                    member.user.username,
+                    "/queue/delete",
+                    deleteMap
+                )
+            }
             println("Response private ${deleteMap.get("messagesId")}")
         }
     }
