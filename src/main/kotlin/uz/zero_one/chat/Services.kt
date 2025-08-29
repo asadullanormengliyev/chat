@@ -202,7 +202,9 @@ class ChatServiceImpl(
 
         val response = MessageResponseDto.toResponse(message)
         if (chat.chatType == ChatType.GROUP) {
+            println("Grouppaga xabar ketdi ====")
             simpleMessagingTemplate.convertAndSend("/topic/chat.${chat.id}", response)
+            println("Response = ${response.messageType} ResponseChatId = ${response.chatId}")
             members.filter { it.user.id != sender.id }.forEach { member ->
                 val unreadCount = messageStatusRepository.countUnreadMessages(member.user.id!!, chat.id!!)
                 simpleMessagingTemplate.convertAndSendToUser(
