@@ -212,7 +212,6 @@ class ChatServiceImpl(
             }
         } else {
             members.forEach { member ->
-                if (member.user.id != sender.id) {
                     println("Qabul qiluvchi ${member.user.username}")
                     simpleMessagingTemplate.convertAndSendToUser(
                         member.user.username,
@@ -227,7 +226,6 @@ class ChatServiceImpl(
                         "/queue/chat-list",
                         ChatListItemDto.from(chat, message, unreadCount)
                     )
-                }
             }
         }
     }
