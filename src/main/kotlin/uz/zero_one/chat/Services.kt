@@ -40,7 +40,7 @@ interface ChatService {
     fun createPublicChat(requestDto: CreatePublicChatRequestDto): GetOneChatResponseDto
     fun addMembers(chatId: Long, requestDto: AddMembersRequestDto?)
     fun markMessagesAsRead(dto: ReadMessageRequestDto, username: String)
-    fun getMessage(chatId: Long, lastMessageId: Long?, pageable: Pageable): List<MessageResponseDto>
+    fun getMessage(chatId: Long, lastMessageId: Long?, pageable: Pageable): Page<MessageResponseDto>
     fun editMessage(chatId: Long, messageId: Long, newContent: String?, username: String)
     fun getChatList(pageable: Pageable): Page<ChatListResponseDto>
     fun deleteMessage(requestDto: DeleteMessageRequestDto, username: String)
@@ -80,11 +80,10 @@ class UserServiceImpl(
 
     override fun updateUser(id: Long, request: UserUpdateRequestDto, file: MultipartFile?) {
         val user = userRepository.findByIdAndDeletedFalse(id) ?: throw UserNotFoundException(id)
-
         request.firstName?.let { user.firstName = it }
         request.username?.let { user.username = it }
         request.bio?.let { user.bio = it }
-
+        println("")
         if (file != null && !file.isEmpty) {
             val extension = file.originalFilename?.substringAfterLast(".")?.lowercase()
             val newFileName = "${UUID.randomUUID()}.${extension}"
@@ -303,7 +302,7 @@ class ChatServiceImpl(
         )
     }
 
-    override fun getMessage(chatId: Long, lastMessageId: Long?, pageable: Pageable): List<MessageResponseDto> {
+    override fun getMessage(chatId: Long, lastMessageId: Long?, pageable: Pageable): Page<MessageResponseDto> {
         val messages = messageRepository.getAllMessages(chatId, lastMessageId, pageable)
         return messages.map { MessageResponseDto.toResponse(it) }
     }

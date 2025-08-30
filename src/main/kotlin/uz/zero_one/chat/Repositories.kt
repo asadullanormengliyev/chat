@@ -127,7 +127,7 @@ interface MessageRepository : BaseRepository<Message> {
         @Param("chatId") chatId: Long,
         @Param("lastMessageId") lastMessageId: Long?,
         pageable: Pageable
-    ): List<Message>
+    ): Page<Message>
 
 }
 

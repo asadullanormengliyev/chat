@@ -45,7 +45,6 @@ class UserController(private val userService: UserServiceImpl){
 
     @PutMapping("/{id}/update")
     fun updateUser(@PathVariable id: Long,@ModelAttribute request: UserUpdateRequestDto) {
-        println("Update")
         userService.updateUser(id, request, request.file)
     }
 
@@ -101,7 +100,7 @@ class ChatController(private val chatService: ChatServiceImpl){
     }
 
     @GetMapping("/{chatId}/messages")
-    fun getMessages(@PathVariable chatId: Long, @RequestParam lastMessageId: Long?, pageable: Pageable): List<MessageResponseDto> {
+    fun getMessages(@PathVariable chatId: Long, @RequestParam lastMessageId: Long?, pageable: Pageable): Page<MessageResponseDto> {
        return chatService.getMessage(chatId,lastMessageId,pageable)
     }
 

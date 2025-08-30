@@ -36,6 +36,7 @@ data class GetOneUserResponseDto(
     val telegramId: Long,
     val firstName: String,
     val username: String,
+    val avatarUrl: String?,
     val bio: String?
 ){
     companion object{
@@ -45,6 +46,7 @@ data class GetOneUserResponseDto(
                 telegramId = user.telegramId,
                 firstName = user.firstName,
                 username = user.username,
+                avatarUrl = user.avatarUrl,
                 bio = user.bio
             )
         }
