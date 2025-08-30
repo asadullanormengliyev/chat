@@ -9,6 +9,12 @@ enum class UserStatus {
     OFFLINE
 }
 
+enum class MessageEventType {
+    UPDATED,
+    DELETED
+}
+
+
 enum class MemberRole {
     OWNER, MEMBER,ADMIN
 }

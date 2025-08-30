@@ -325,22 +325,22 @@ class ChatServiceImpl(
         message.edited = true
         val updateMessage = messageRepository.save(message)
         val response = MessageResponseDto.toResponse(updateMessage)
-
+        val responseDto = ChatUpdateResponseDto(MessageEventType.UPDATED, response)
         val members = chatMemberRepository.findByChatIdAndDeletedFalse(chat.id!!)
         members.filter { it.user.username != username }.forEach { member ->
+            println("Har bir userga update = ${member.user.username}")
             simpleMessagingTemplate.convertAndSendToUser(
                 member.user.username,
                 "/queue/messages",
-                response
+                responseDto
             )
+            println("Update bo'ldi")
         }
     }
 
     override fun deleteChat(requestDto: DeleteChatRequestDto, username: String) {
-        val chat = chatRepository.findByIdAndDeletedFalse(requestDto.chatId)
-            ?: throw ChatNotFoundException(requestDto.chatId)
-        val currentUser =
-            userRepository.findByUsernameAndDeletedFalse(username) ?: throw UsernameNotFoundException(username)
+        val chat = chatRepository.findByIdAndDeletedFalse(requestDto.chatId) ?: throw ChatNotFoundException(requestDto.chatId)
+        val currentUser = userRepository.findByUsernameAndDeletedFalse(username) ?: throw UsernameNotFoundException(username)
         val members = chatMemberRepository.findAllByChatIdAndDeletedFalse(requestDto.chatId)
 
         if (requestDto.deleted) {
@@ -428,21 +428,20 @@ class ChatServiceImpl(
         }
         println("TrashList")
         messageRepository.trashList(requestDto.messageIds)
+        val responseDto = ChatDeleteResponseDto(MessageEventType.DELETED, requestDto.messageIds)
 
         if (chat.chatType == ChatType.GROUP) {
             simpleMessagingTemplate.convertAndSend(
                 "/topic/chat.${chat.id}",
-                requestDto.messageIds
+                responseDto
             )
         } else {
             members.forEach { member ->
-                println("Qabul qiluvchi username = ${member.user.username}")
                 simpleMessagingTemplate.convertAndSendToUser(
                     member.user.username,
                     "/queue/messages",
-                    requestDto.messageIds
+                    requestDto
                 )
-                println("RequestMessageIds = ${requestDto.messageIds}")
             }
         }
     }

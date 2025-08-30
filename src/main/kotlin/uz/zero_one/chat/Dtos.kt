@@ -264,3 +264,13 @@ data class DeleteChatRequestDto(
     val chatId: Long,
     val deleted: Boolean
 )
+
+data class ChatDeleteResponseDto(
+    val type: MessageEventType,
+    val messageIds: List<Long>
+)
+
+data class ChatUpdateResponseDto(
+    val type: MessageEventType,
+    val messageResponseDto: MessageResponseDto
+)
