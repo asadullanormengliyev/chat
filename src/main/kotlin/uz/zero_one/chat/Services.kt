@@ -345,11 +345,13 @@ class ChatServiceImpl(
         val members = chatMemberRepository.findAllByChatIdAndDeletedFalse(requestDto.chatId)
 
         if (requestDto.deleted) {
+            println("Private chat")
             if (chat.chatType == ChatType.PRIVATE) {
                 chatRepository.trash(chat.id!!)
                 members.forEach { member ->
                     member.deletedAt = LocalDateTime.now()
                     chatMemberRepository.trash(member.id!!)
+                    println("chatlar o'chirildi")
                     simpleMessagingTemplate.convertAndSendToUser(
                         member.user.username,
                         "/queue/chat-delete",
@@ -374,10 +376,12 @@ class ChatServiceImpl(
                 }
             }
         } else {
+            println("Faqat o'zidan chatni o'chirish")
             val currentMember = members.firstOrNull { it.user.id == currentUser.id }
                 ?: throw ChatNotFoundException(requestDto.chatId)
             currentMember.deletedAt = LocalDateTime.now()
             chatMemberRepository.trash(currentMember.id!!)
+            println("Faqat o'zidan o'chirildi")
         }
 
     }
