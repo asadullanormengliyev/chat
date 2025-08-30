@@ -339,7 +339,6 @@ class ChatServiceImpl(
     override fun deleteChat(requestDto: DeleteChatRequestDto, username: String) {
         val chat = chatRepository.findByIdAndDeletedFalse(requestDto.chatId)
             ?: throw ChatNotFoundException(requestDto.chatId)
-
         val currentUser =
             userRepository.findByUsernameAndDeletedFalse(username) ?: throw UsernameNotFoundException(username)
         val members = chatMemberRepository.findAllByChatIdAndDeletedFalse(requestDto.chatId)
@@ -414,8 +413,7 @@ class ChatServiceImpl(
 
     @Transactional
     override fun deleteMessage(requestDto: DeleteMessageRequestDto, username: String) {
-        val chat =
-            chatRepository.findByIdAndDeletedFalse(requestDto.chatId) ?: throw ChatNotFoundException(requestDto.chatId)
+        val chat = chatRepository.findByIdAndDeletedFalse(requestDto.chatId) ?: throw ChatNotFoundException(requestDto.chatId)
         val user = userRepository.findByUsernameAndDeletedFalse(username) ?: throw UsernameNotFoundException(username)
         val messages = messageRepository.findAllById(requestDto.messageIds)
         val members = chatMemberRepository.findByChatIdAndDeletedFalse(chat.id!!)
@@ -441,7 +439,7 @@ class ChatServiceImpl(
                 println("Qabul qiluvchi username = ${member.user.username}")
                 simpleMessagingTemplate.convertAndSendToUser(
                     member.user.username,
-                    "/queue/delete",
+                    "/queue/messages",
                     requestDto.messageIds
                 )
                 println("RequestMessageIds = ${requestDto.messageIds}")
