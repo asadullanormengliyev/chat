@@ -3,6 +3,7 @@ package uz.zero_one.chat
 import jakarta.transaction.Transactional
 import org.springframework.context.ApplicationListener
 import org.springframework.data.domain.Page
+import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Pageable
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.messaging.simp.SimpMessagingTemplate
@@ -39,7 +40,7 @@ interface ChatService {
     fun createPublicChat(requestDto: CreatePublicChatRequestDto): GetOneChatResponseDto
     fun addMembers(chatId: Long, requestDto: AddMembersRequestDto?)
     fun markMessagesAsRead(dto: ReadMessageRequestDto, username: String)
-    fun getAllMessage(chatId: Long, pageable: Pageable): Page<MessageResponseDto>
+    fun getMessage(chatId: Long, lastMessageId: Long?, pageable: Pageable): List<MessageResponseDto>
     fun editMessage(chatId: Long, messageId: Long, newContent: String?, username: String)
     fun getChatList(pageable: Pageable): Page<ChatListResponseDto>
     fun deleteMessage(requestDto: DeleteMessageRequestDto, username: String)
@@ -299,10 +300,11 @@ class ChatServiceImpl(
         )
     }
 
-    override fun getAllMessage(chatId: Long, pageable: Pageable): Page<MessageResponseDto> { // O'zgartirish kerak
-        val messages = messageRepository.getAllMessage(chatId, pageable)
-        return messages.map { message -> MessageResponseDto.toResponse(message) }
+   override fun getMessage(chatId: Long, lastMessageId: Long?, pageable: Pageable): List<MessageResponseDto> {
+        val messages = messageRepository.getAllMessages(chatId, lastMessageId, pageable)
+        return messages.map { MessageResponseDto.toResponse(it) }
     }
+
 
     override fun editMessage(
         chatId: Long,
@@ -394,27 +396,18 @@ class ChatServiceImpl(
 
     @Transactional
     override fun deleteMessage(requestDto: DeleteMessageRequestDto, username: String) {
-        println("Username = $username")
         val chat = chatRepository.findByIdAndDeletedFalse(requestDto.chatId) ?: throw ChatNotFoundException(requestDto.chatId)
-        println("Chat = ${chat.id}")
         val user = userRepository.findByUsernameAndDeletedFalse(username) ?: throw UsernameNotFoundException(username)
-        println("User = ${user.username}")
         val messages = messageRepository.findAllById(requestDto.messageIds)
         val members = chatMemberRepository.findByChatIdAndDeletedFalse(chat.id!!)
-        println("Messages size = ${messages.size}")
-        println("Messages content = $messages")
-        println("ReuestMessagesIds = ${requestDto.messageIds}")
         messages.forEach { message ->
             println("Forga kirdi")
             if (message.chat.id != chat.id) {
-                println("Messageni chatId teng emas chatId ga")
                 throw MessageChatMismatchException(message.content)
             }
             if (message.sender.id != user.id) {
-                println("Delete user ")
                 throw MessageAccessDeniedException(message.sender.username)
             }
-            println("DeleteMessage for dan chiqdi")
         }
         println("TrashList")
         messageRepository.trashList(requestDto.messageIds)
@@ -434,7 +427,6 @@ class ChatServiceImpl(
                 )
                 println("RequestMessageIds = ${requestDto.messageIds}")
             }
-
         }
     }
 

@@ -57,17 +57,17 @@ class SecurityConfig(private val jwtAuthenticationFilter: JwtAuthenticationFilte
         return BCryptPasswordEncoder()
     }
 
-    @Bean
-    fun corsConfigurationSource(): CorsConfigurationSource {
-        val configuration = CorsConfiguration()
-        configuration.allowedOrigins = listOf("https://085cce83aefe.ngrok-free.app","https://sage-sunburst-60ba08.netlify.app","https://chat-h80l.onrender.com","https://6120d8c2a946.ngrok-free.app","http://localhost:5173")
-        configuration.allowedMethods = listOf("GET", "POST", "PUT", "DELETE", "OPTIONS")
-        configuration.allowedHeaders = listOf("*")
-        configuration.allowCredentials = true
-        val source = UrlBasedCorsConfigurationSource()
-        source.registerCorsConfiguration("/**", configuration)
-        return source
-    }
+//    @Bean
+//    fun corsConfigurationSource(): CorsConfigurationSource {
+//        val configuration = CorsConfiguration()
+//        configuration.allowedOrigins = listOf("https://085cce83aefe.ngrok-free.app","https://sage-sunburst-60ba08.netlify.app","https://chat-h80l.onrender.com","https://6120d8c2a946.ngrok-free.app","http://localhost:5173")
+//        configuration.allowedMethods = listOf("GET", "POST", "PUT", "DELETE", "OPTIONS")
+//        configuration.allowedHeaders = listOf("*")
+//        configuration.allowCredentials = true
+//        val source = UrlBasedCorsConfigurationSource()
+//        source.registerCorsConfiguration("/**", configuration)
+//        return source
+//    }
 
 }
 
@@ -77,7 +77,7 @@ class WebSocketConfig(private val userServiceImpl: UserServiceImpl) : WebSocketM
 
     override fun registerStompEndpoints(registry: StompEndpointRegistry) {
         registry.addEndpoint("/chat")
-            .setAllowedOriginPatterns("https://085cce83aefe.ngrok-free.app","https://sage-sunburst-60ba08.netlify.app","https://chat-h80l.onrender.com","https://6120d8c2a946.ngrok-free.app","http://localhost:5173")
+//            .setAllowedOriginPatterns("https://085cce83aefe.ngrok-free.app","https://sage-sunburst-60ba08.netlify.app","https://chat-h80l.onrender.com","https://6120d8c2a946.ngrok-free.app","http://localhost:5173")
              .withSockJS()
     }
 

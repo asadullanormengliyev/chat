@@ -101,8 +101,8 @@ class ChatController(private val chatService: ChatServiceImpl){
     }
 
     @GetMapping("/{chatId}/messages")
-    fun getMessages(@PathVariable chatId: Long,pageable: Pageable): Page<MessageResponseDto> {
-       return chatService.getAllMessage(chatId,pageable)
+    fun getMessages(@PathVariable chatId: Long, @RequestParam lastMessageId: Long?, pageable: Pageable): List<MessageResponseDto> {
+       return chatService.getMessage(chatId,lastMessageId,pageable)
     }
 
     @MessageMapping("/message.edit")
