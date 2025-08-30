@@ -59,7 +59,7 @@ class WebSocketConfig(private val userServiceImpl: UserServiceImpl) : WebSocketM
 
     override fun registerStompEndpoints(registry: StompEndpointRegistry) {
         registry.addEndpoint("/chat")
-            .setAllowedOriginPatterns("https://562700a7ffbe.ngrok-free.app","https://sage-sunburst-60ba08.netlify.app","https://chat-h80l.onrender.com","http://localhost:5173")
+            .setAllowedOriginPatterns("https://97d8bef018e5.ngrok-free.app","https://sage-sunburst-60ba08.netlify.app","https://chat-h80l.onrender.com","http://localhost:5173")
              .withSockJS()
     }
 
