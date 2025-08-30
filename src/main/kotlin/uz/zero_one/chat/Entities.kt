@@ -104,6 +104,8 @@ class MessageStatus(
 @Entity
 @Table(name = "files")
 class FileEntity(
+    @ManyToOne
+    val user: User,
     var originalName: String,
     var fileUrl: String,
     var size: Long,

@@ -133,5 +133,10 @@ class ChatController(private val chatService: ChatServiceImpl){
         chatService.deleteChat(requestDto,principal.name)
     }
 
+    @GetMapping("/get-chat-type")
+    fun getChatTypa(@RequestParam chatType: ChatType,pageable: Pageable): Page<ChatListResponseDto>{
+       return chatService.getChatType(chatType,pageable)
+    }
+
 }
 

@@ -45,7 +45,8 @@ interface ChatService {
     fun getChatList(pageable: Pageable): Page<ChatListResponseDto>
     fun deleteMessage(requestDto: DeleteMessageRequestDto, username: String)
     fun getGroupChatDetails(chatId: Long): GroupChatResponseDto
-    fun deleteChat(requestDto: DeleteChatRequestDto,username: String)
+    fun deleteChat(requestDto: DeleteChatRequestDto, username: String)
+    fun getChatType(chatType: ChatType,pageable: Pageable): Page<ChatListResponseDto>
 }
 
 @Service
@@ -213,20 +214,20 @@ class ChatServiceImpl(
             }
         } else {
             members.forEach { member ->
-                    println("Qabul qiluvchi ${member.user.username}")
-                    simpleMessagingTemplate.convertAndSendToUser(
-                        member.user.username,
-                        "/queue/messages",
-                        response
-                    )
-                    val unreadCount = messageStatusRepository.countUnreadMessages(member.user.id!!, chat.id!!)
-                    println("Har bir userga yuborilayabdi")
-                    println("Chat = ${chat.id} + MessageContent = ${message.content} + UnreadCount = $unreadCount")
-                    simpleMessagingTemplate.convertAndSendToUser(
-                        member.user.username,
-                        "/queue/chat-list",
-                        ChatListItemDto.from(chat, message, unreadCount)
-                    )
+                println("Qabul qiluvchi ${member.user.username}")
+                simpleMessagingTemplate.convertAndSendToUser(
+                    member.user.username,
+                    "/queue/messages",
+                    response
+                )
+                val unreadCount = messageStatusRepository.countUnreadMessages(member.user.id!!, chat.id!!)
+                println("Har bir userga yuborilayabdi")
+                println("Chat = ${chat.id} + MessageContent = ${message.content} + UnreadCount = $unreadCount")
+                simpleMessagingTemplate.convertAndSendToUser(
+                    member.user.username,
+                    "/queue/chat-list",
+                    ChatListItemDto.from(chat, message, unreadCount)
+                )
             }
         }
     }
@@ -234,12 +235,13 @@ class ChatServiceImpl(
     private fun messageType(dto: MessageRequestDto): MessageType {
         return when {
             dto.latitude != null && dto.longitude != null -> MessageType.LOCATION
-            dto.fileUrl != null  -> when {
+            dto.fileUrl != null -> when {
                 dto.fileUrl.endsWith(".jpg") || dto.fileUrl.endsWith(".png") -> MessageType.IMAGE
                 dto.fileUrl.endsWith(".mp4") -> MessageType.VIDEO
                 dto.fileUrl.endsWith(".mp3") -> MessageType.AUDIO
                 else -> MessageType.FILE
             }
+
             !dto.content.isNullOrBlank() -> MessageType.TEXT
             else -> throw IllegalArgumentException("Cannot determine message type")
         }
@@ -248,26 +250,27 @@ class ChatServiceImpl(
     @Transactional
     override fun createPublicChat(requestDto: CreatePublicChatRequestDto): GetOneChatResponseDto {
         val currentUserId = getCurrentUserId()
-        val currentUser = userRepository.findByIdAndDeletedFalse(currentUserId) ?: throw UserNotFoundException(currentUserId)
+        val currentUser =
+            userRepository.findByIdAndDeletedFalse(currentUserId) ?: throw UserNotFoundException(currentUserId)
         var avatarUrl: String? = null
         val file = requestDto.file
-        if ( file != null){
+        if (file != null) {
             val extension = file.originalFilename?.substringAfterLast(".")?.lowercase()
             val newFile = "${UUID.randomUUID()}.${extension}"
             val uploadPath = Paths.get("uploads/avatars")
             val savedFile = uploadPath.resolve(newFile)
             Files.createDirectories(uploadPath)
-            Files.copy(file.inputStream,savedFile, StandardCopyOption.REPLACE_EXISTING)
+            Files.copy(file.inputStream, savedFile, StandardCopyOption.REPLACE_EXISTING)
             avatarUrl = "/uploads/avatars/$newFile"
         }
         val chat = Chat(chatType = ChatType.GROUP, groupName = requestDto.groupName, avatarUrl = avatarUrl)
         chatRepository.save(chat)
         chatMemberRepository.save(ChatMember(chat = chat, user = currentUser, role = MemberRole.OWNER))
-        addMembers(chat.id!!,requestDto.membersRequestDto)
+        addMembers(chat.id!!, requestDto.membersRequestDto)
         return GetOneChatResponseDto.toResponse(chat)
     }
 
-   override fun addMembers(chatId: Long, requestDto: AddMembersRequestDto?) {
+    override fun addMembers(chatId: Long, requestDto: AddMembersRequestDto?) {
         val currentUserId = getCurrentUserId()
         val chat = chatRepository.findByIdAndDeletedFalse(chatId) ?: throw ChatNotFoundException(chatId)
         val currentMember = chatMemberRepository.findByChatIdAndUserId(chatId, currentUserId)
@@ -300,11 +303,10 @@ class ChatServiceImpl(
         )
     }
 
-   override fun getMessage(chatId: Long, lastMessageId: Long?, pageable: Pageable): List<MessageResponseDto> {
+    override fun getMessage(chatId: Long, lastMessageId: Long?, pageable: Pageable): List<MessageResponseDto> {
         val messages = messageRepository.getAllMessages(chatId, lastMessageId, pageable)
         return messages.map { MessageResponseDto.toResponse(it) }
     }
-
 
     override fun editMessage(
         chatId: Long,
@@ -335,68 +337,82 @@ class ChatServiceImpl(
         }
     }
 
-    override fun getChatList(pageable: Pageable): Page<ChatListResponseDto> {
-        val userId = getCurrentUserId()
-        val chatMembers = chatMemberRepository.findByUserId(userId, pageable)
-        return chatMembers.map { cm ->
-            val chat = cm.chat
-            val unreadCount = messageStatusRepository.countUnreadMessages(userId, chat.id!!)
-            val otherUser = if (chat.chatType == ChatType.PRIVATE) {
-                chat.members.firstOrNull { it.user.id != userId }?.user
-            } else null
-            ChatListResponseDto.from(chat, chat.lastMessage, unreadCount, otherUser)
-        }
-    }
-
-   override fun deleteChat(requestDto: DeleteChatRequestDto,username: String) {
+    override fun deleteChat(requestDto: DeleteChatRequestDto, username: String) {
         val chat = chatRepository.findByIdAndDeletedFalse(requestDto.chatId)
             ?: throw ChatNotFoundException(requestDto.chatId)
 
-       val currentUser = userRepository.findByUsernameAndDeletedFalse(username)?:throw UsernameNotFoundException(username)
-       val members = chatMemberRepository.findAllByChatIdAndDeletedFalse(requestDto.chatId)
+        val currentUser =
+            userRepository.findByUsernameAndDeletedFalse(username) ?: throw UsernameNotFoundException(username)
+        val members = chatMemberRepository.findAllByChatIdAndDeletedFalse(requestDto.chatId)
 
-       if (requestDto.deleted) {
-           if (chat.chatType == ChatType.PRIVATE) {
-               chatRepository.trash(chat.id!!)
-               members.forEach { member ->
-                   member.deletedAt = LocalDateTime.now()
-                   chatMemberRepository.trash(member.id!!)
-                       simpleMessagingTemplate.convertAndSendToUser(
-                           member.user.username,
-                           "/queue/chat-delete",
-                           chat.id!!
-                       )
-               }
-           }
-           else if (chat.chatType == ChatType.GROUP) {
-               val currentMember = members.firstOrNull { it.user.id == currentUser.id }
-                   ?: throw ChatNotFoundException(requestDto.chatId)
-               if (currentMember.role != MemberRole.OWNER && currentMember.role != MemberRole.ADMIN) {
-                   throw ChatNotDeletedPermissionException(currentUser.firstName)
-               }
-               chatRepository.trash(chat.id!!)
-               members.forEach { member ->
-                   member.deletedAt = LocalDateTime.now()
-                   chatMemberRepository.trash(member.id!!)
-                   simpleMessagingTemplate.convertAndSendToUser(
-                       member.user.username,
-                       "/queue/chat-delete",
-                       chat.id!!
-                   )
-               }
-           }
-       } else {
-           val currentMember = members.firstOrNull { it.user.id == currentUser.id }
-               ?: throw ChatNotFoundException(requestDto.chatId)
-           currentMember.deletedAt = LocalDateTime.now()
-           chatMemberRepository.trash(currentMember.id!!)
-       }
+        if (requestDto.deleted) {
+            if (chat.chatType == ChatType.PRIVATE) {
+                chatRepository.trash(chat.id!!)
+                members.forEach { member ->
+                    member.deletedAt = LocalDateTime.now()
+                    chatMemberRepository.trash(member.id!!)
+                    simpleMessagingTemplate.convertAndSendToUser(
+                        member.user.username,
+                        "/queue/chat-delete",
+                        chat.id!!
+                    )
+                }
+            } else if (chat.chatType == ChatType.GROUP) {
+                val currentMember = members.firstOrNull { it.user.id == currentUser.id }
+                    ?: throw ChatNotFoundException(requestDto.chatId)
+                if (currentMember.role != MemberRole.OWNER && currentMember.role != MemberRole.ADMIN) {
+                    throw ChatNotDeletedPermissionException(currentUser.firstName)
+                }
+                chatRepository.trash(chat.id!!)
+                members.forEach { member ->
+                    member.deletedAt = LocalDateTime.now()
+                    chatMemberRepository.trash(member.id!!)
+                    simpleMessagingTemplate.convertAndSendToUser(
+                        member.user.username,
+                        "/queue/chat-delete",
+                        chat.id!!
+                    )
+                }
+            }
+        } else {
+            val currentMember = members.firstOrNull { it.user.id == currentUser.id }
+                ?: throw ChatNotFoundException(requestDto.chatId)
+            currentMember.deletedAt = LocalDateTime.now()
+            chatMemberRepository.trash(currentMember.id!!)
+        }
 
+    }
+
+    override fun getChatList(pageable: Pageable): Page<ChatListResponseDto> {
+        val userId = getCurrentUserId()
+        val chatMembers = chatMemberRepository.findByUserId(userId, pageable)
+        return chatMembers.map { member ->
+            val chat = member.chat
+            val unreadMessages = messageStatusRepository.countUnreadMessages(userId, chat.id!!)
+            val otherUser = if (chat.chatType == ChatType.PRIVATE) {
+                chat.members.firstOrNull { it.user.id != userId }?.user
+            } else null
+            ChatListResponseDto.from(chat, chat.lastMessage, unreadMessages, otherUser)
+        }
+    }
+
+    override fun getChatType(chatType: ChatType,pageable: Pageable): Page<ChatListResponseDto> {
+        val currentUserId = getCurrentUserId()
+        val chatMembers = chatMemberRepository.findByUserIdAndChatType(currentUserId, chatType, pageable)
+        return chatMembers.map { member ->
+            val chat = member.chat
+            val unreadMessages = messageStatusRepository.countUnreadMessages(currentUserId, chat.id!!)
+          val otherUser = if (chat.chatType == ChatType.PRIVATE){
+                 chat.members.firstOrNull { member -> member.user.id != currentUserId }?.user
+            }else null
+            ChatListResponseDto.from(chat, chat.lastMessage, unreadMessages, otherUser)
+        }
     }
 
     @Transactional
     override fun deleteMessage(requestDto: DeleteMessageRequestDto, username: String) {
-        val chat = chatRepository.findByIdAndDeletedFalse(requestDto.chatId) ?: throw ChatNotFoundException(requestDto.chatId)
+        val chat =
+            chatRepository.findByIdAndDeletedFalse(requestDto.chatId) ?: throw ChatNotFoundException(requestDto.chatId)
         val user = userRepository.findByUsernameAndDeletedFalse(username) ?: throw UsernameNotFoundException(username)
         val messages = messageRepository.findAllById(requestDto.messageIds)
         val members = chatMemberRepository.findByChatIdAndDeletedFalse(chat.id!!)
@@ -433,22 +449,24 @@ class ChatServiceImpl(
     override fun getGroupChatDetails(chatId: Long): GroupChatResponseDto {
         val chat = chatRepository.findByIdAndDeletedFalse(chatId) ?: throw ChatNotFoundException(chatId)
         val members = chatMemberRepository.findByChatIdAndDeletedFalse(chatId)
-       val memberDto = members.map { member ->
-            MemberDto(member.user.id!!,member.user.firstName,member.user.avatarUrl)
-       }
-        return GroupChatResponseDto(chat.id!!,chat.groupName,chat.avatarUrl,memberDto)
+        val memberDto = members.map { member ->
+            MemberDto(member.user.id!!, member.user.firstName, member.user.avatarUrl)
+        }
+        return GroupChatResponseDto(chat.id!!, chat.groupName, chat.avatarUrl, memberDto)
     }
 
     fun saveFile(file: MultipartFile): FileResponseDto {
+        val currentUserId = getCurrentUserId()
+        val user = userRepository.findByIdAndDeletedFalse(currentUserId) ?: throw UserNotFoundException(currentUserId)
         val extension = file.originalFilename?.substringAfterLast(".")?.lowercase()
         val newFile = "${UUID.randomUUID()}.$extension"
         val uploadPath = Paths.get("uploads/files")
         val savedFile = uploadPath.resolve(newFile)
-
         Files.createDirectories(uploadPath)
         Files.copy(file.inputStream, savedFile, StandardCopyOption.REPLACE_EXISTING)
 
         val entity = FileEntity(
+            user = user,
             originalName = file.originalFilename ?: newFile,
             fileUrl = "/uploads/files/$newFile",
             size = file.size,
@@ -457,7 +475,7 @@ class ChatServiceImpl(
         )
         fileRepository.save(entity)
 
-        return FileResponseDto(entity.id!!, entity.fileUrl, entity.messageType)
+        return FileResponseDto(entity.id!!, entity.originalName,entity.fileUrl, entity.size,entity.messageType)
     }
 
     private fun detectFileType(extension: String?): MessageType {

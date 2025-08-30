@@ -185,7 +185,9 @@ data class CreatePublicChatRequestDto(
 
 data class FileResponseDto(
     val id: Long,
+    val originalName: String,
     val fileUrl: String,
+    val fileSize: Long,
     val messageType: MessageType
 )
 

@@ -98,6 +98,19 @@ interface ChatMemberRepository : BaseRepository<ChatMember> {
     fun findByUserId(@Param("userId") userId: Long,pageable: Pageable): Page<ChatMember>
 
     fun findAllByChatIdAndDeletedFalse(chatId: Long): List<ChatMember>
+
+    @Query("""
+            select cm from ChatMember cm 
+            where cm.user.id = :userId 
+              and cm.chat.deleted = false
+              and (:chatType is null or cm.chat.chatType = :chatType)
+        """)
+    fun findByUserIdAndChatType(
+        @Param("userId") userId: Long,
+        @Param("chatType") chatType: ChatType?,
+        pageable: Pageable
+    ): Page<ChatMember>
+
 }
 
 @Repository
