@@ -21,7 +21,9 @@ import java.io.File
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.nio.file.StandardCopyOption
+import java.security.MessageDigest
 import java.time.LocalDateTime
+import java.util.Base64
 import java.util.Date
 import java.util.UUID
 
@@ -169,14 +171,14 @@ class ChatServiceImpl(
         val replyMessage = messageDto.replyToId?.let { messageRepository.findByIdOrNull(it) }
         println("Chatid = ${chat.id}")
         println("SenderUsername = ${sender.username}")
-        val messageType = messageType(messageDto)
+
         val message = messageRepository.save(
             Message(
                 chat = chat,
                 sender = sender,
-                messageType = messageType,
+                messageType = messageDto.messageType,
                 content = messageDto.content,
-                fileUrl = messageDto.fileUrl,
+                hash = messageDto.hash,
                 latitude = messageDto.latitude,
                 longitude = messageDto.longitude,
                 replyTo = replyMessage
@@ -228,21 +230,6 @@ class ChatServiceImpl(
                     ChatListItemDto.from(chat, message, unreadCount)
                 )
             }
-        }
-    }
-
-    private fun messageType(dto: MessageRequestDto): MessageType {
-        return when {
-            dto.latitude != null && dto.longitude != null -> MessageType.LOCATION
-            dto.fileUrl != null -> when {
-                dto.fileUrl.endsWith(".jpg") || dto.fileUrl.endsWith(".png") -> MessageType.IMAGE
-                dto.fileUrl.endsWith(".mp4") -> MessageType.VIDEO
-                dto.fileUrl.endsWith(".mp3") -> MessageType.AUDIO
-                else -> MessageType.FILE
-            }
-
-            !dto.content.isNullOrBlank() -> MessageType.TEXT
-            else -> throw IllegalArgumentException("Cannot determine message type")
         }
     }
 
@@ -418,7 +405,6 @@ class ChatServiceImpl(
         val messages = messageRepository.findAllById(requestDto.messageIds)
         val members = chatMemberRepository.findByChatIdAndDeletedFalse(chat.id!!)
         messages.forEach { message ->
-            println("Forga kirdi")
             if (message.chat.id != chat.id) {
                 throw MessageChatMismatchException(message.content)
             }
@@ -426,7 +412,6 @@ class ChatServiceImpl(
                 throw MessageAccessDeniedException(message.sender.username)
             }
         }
-        println("TrashList")
         messageRepository.trashList(requestDto.messageIds)
         val responseDto = ChatDeleteResponseDto(MessageEventType.DELETED, requestDto.messageIds)
 
@@ -471,12 +456,23 @@ class ChatServiceImpl(
             fileUrl = "/uploads/files/$newFile",
             size = file.size,
             extension = extension,
-            messageType = detectFileType(extension)
+            messageType = detectFileType(extension),
+            hash = null
         )
         fileRepository.save(entity)
 
-        return FileResponseDto(entity.id!!, entity.originalName,entity.fileUrl, entity.size,entity.messageType)
+        val hashId = hashId(entity.id!!)
+        entity.hash = hashId
+        fileRepository.save(entity)
+        return FileResponseDto(entity.id!!,entity.originalName,entity.hash!!,entity.messageType)
     }
+
+    private fun hashId(id: Long): String {
+        val md = MessageDigest.getInstance("SHA-256")
+        val hashBytes = md.digest(id.toString().toByteArray())
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(hashBytes)
+    }
+
 
     private fun detectFileType(extension: String?): MessageType {
         return when (extension) {

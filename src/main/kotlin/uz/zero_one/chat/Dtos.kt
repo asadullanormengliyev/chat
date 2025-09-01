@@ -76,7 +76,7 @@ data class MessageRequestDto(
     val receiverId: Long?,
     val messageType: MessageType,
     val content: String? = null,
-    val fileUrl: String? = null,
+    val hash: String? = null,
     val latitude: Double? = null,
     val longitude: Double? = null,
     val replyToId: Long? = null
@@ -88,7 +88,7 @@ data class MessageResponseDto(
     val senderId: Long,
     val messageType: MessageType?,
     val content: String?,
-    val fileUrl: String?,
+    val hash: String?,
     val latitude: Double?,
     val longitude: Double?,
     val replyToId: Long?,
@@ -102,7 +102,7 @@ data class MessageResponseDto(
                 senderId = message.sender.id!!,
                 messageType = message.messageType,
                 content = message.content,
-                fileUrl = message.fileUrl,
+                hash = message.hash,
                 latitude = message.latitude,
                 longitude = message.longitude,
                 replyToId = message.replyTo?.id,
@@ -188,8 +188,7 @@ data class CreatePublicChatRequestDto(
 data class FileResponseDto(
     val id: Long,
     val originalName: String,
-    val fileUrl: String,
-    val fileSize: Long,
+    val hash: String,
     val messageType: MessageType
 )
 

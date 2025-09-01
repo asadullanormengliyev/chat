@@ -81,7 +81,7 @@ class Message(
     @Enumerated(EnumType.STRING)
     var messageType: MessageType,
     var content: String? = null,
-    var fileUrl: String? = null,
+    var hash: String? = null,
     var latitude: Double? = null,
     var longitude: Double? = null,
     @ManyToOne
@@ -110,6 +110,7 @@ class FileEntity(
     var fileUrl: String,
     var size: Long,
     var extension: String?,
+    var hash: String?,
     @Enumerated(EnumType.STRING)
     var messageType: MessageType
 ) : BaseEntity()
