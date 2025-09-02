@@ -144,29 +144,6 @@ data class UserStatusDto(
     val lastSeen: LocalDateTime?
 )
 
-data class ChatListItemDto(
-    val chatId: Long,
-    val chatName: String?,
-    val chatType: ChatType,
-    val lastMessage: MessageDto?,
-    val unreadCount: Long,
-    val chatImageUrl: String? = null,
-    val lastMessageAt: Date? = null
-) {
-    companion object {
-        fun from(chat: Chat, lastMessage: Message?, unreadCount: Long): ChatListItemDto {
-            return ChatListItemDto(
-                chatId = chat.id!!,
-                chatName = chat.groupName ?: lastMessage?.sender?.firstName,
-                chatType = chat.chatType,
-                lastMessage = lastMessage?.let { MessageDto.toResponse(it) },
-                unreadCount = unreadCount,
-                chatImageUrl = chat.avatarUrl ?:lastMessage?.sender?.avatarUrl,
-                lastMessageAt = lastMessage?.createdDate
-            )
-        }
-    }
-}
 
 data class EditMessageRequestDto(
     val chatId: Long,

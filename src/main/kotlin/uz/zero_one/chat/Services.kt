@@ -200,6 +200,10 @@ class ChatServiceImpl(
         }
 
         val response = MessageResponseDto.toResponse(message)
+        val otherUser = if (chat.chatType == ChatType.PRIVATE) {
+            chat.members.firstOrNull { it.user.id != sender.id }?.user
+        } else null
+
         if (chat.chatType == ChatType.GROUP) {
             println("Guruppaga xabar keldi = ${chat.id}")
             simpleMessagingTemplate.convertAndSend("/topic/chat.${chat.id}", response)
@@ -209,7 +213,7 @@ class ChatServiceImpl(
                 simpleMessagingTemplate.convertAndSendToUser(
                     member.user.username,
                     "/queue/chat-list",
-                    ChatListItemDto.from(chat, message, unreadCount)
+                    ChatListResponseDto.from(chat, message, unreadCount,otherUser)
                 )
                 println("Har bir userga yuborlidi")
             }
@@ -227,7 +231,7 @@ class ChatServiceImpl(
                 simpleMessagingTemplate.convertAndSendToUser(
                     member.user.username,
                     "/queue/chat-list",
-                    ChatListItemDto.from(chat, message, unreadCount)
+                    ChatListResponseDto.from(chat, message,unreadCount,otherUser)
                 )
             }
         }
@@ -236,8 +240,7 @@ class ChatServiceImpl(
     private fun messageType(messageDto: MessageRequestDto): MessageType {
         return when {
             messageDto.hash != null -> {
-                val file = fileRepository.findByHashAndDeletedFalse(messageDto.hash)
-                    ?: throw FileHashNotFoundException(messageDto.hash)
+                val file = fileRepository.findByHashAndDeletedFalse(messageDto.hash) ?: throw FileHashNotFoundException(messageDto.hash)
                 file.messageType
             }
             !messageDto.content.isNullOrBlank() -> {
@@ -248,7 +251,6 @@ class ChatServiceImpl(
             }
         }
     }
-
 
     @Transactional
     override fun createPublicChat(requestDto: CreatePublicChatRequestDto): GetOneChatResponseDto {
@@ -498,6 +500,12 @@ class ChatServiceImpl(
             "pdf", "doc", "docx" -> MessageType.DOCUMENT
             else -> MessageType.OTHER
         }
+    }
+
+    fun getFile(hash: String): File{
+        val entity = fileRepository.findByHashAndDeletedFalse(hash) ?: throw FileHashNotFoundException(hash)
+        val file = File(entity.fileUrl)
+        return file
     }
 
 }
