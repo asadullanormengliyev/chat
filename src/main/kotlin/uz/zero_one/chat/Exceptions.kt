@@ -87,3 +87,8 @@ class ChatNotDeletedPermissionException(val msg: String?) : DemoException(){
     override fun errorType() = ErrorCode.CHAT_NOT_DELETED_PERMISSION_EXCEPTION
     override fun getErrorMessageArguments(): Array<Any?> = arrayOf(msg)
 }
+
+class FileHashNotFoundException(val hash: String) : DemoException(){
+    override fun errorType() = ErrorCode.FILE_HASH_NOT_FOUND_EXCEPTION
+    override fun getErrorMessageArguments(): Array<Any?> = arrayOf(hash)
+}

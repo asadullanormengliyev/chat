@@ -152,5 +152,5 @@ interface MessageStatusRepository : BaseRepository<MessageStatus> {
 
 @Repository
 interface FileRepository : BaseRepository<FileEntity>{
-
+    fun findByHashAndDeletedFalse(hash: String): FileEntity?
 }

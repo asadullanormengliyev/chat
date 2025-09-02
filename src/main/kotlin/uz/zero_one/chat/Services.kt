@@ -176,7 +176,7 @@ class ChatServiceImpl(
             Message(
                 chat = chat,
                 sender = sender,
-                messageType = messageDto.messageType,
+                messageType = messageType(messageDto),
                 content = messageDto.content,
                 hash = messageDto.hash,
                 latitude = messageDto.latitude,
@@ -232,6 +232,23 @@ class ChatServiceImpl(
             }
         }
     }
+
+    private fun messageType(messageDto: MessageRequestDto): MessageType {
+        return when {
+            messageDto.hash != null -> {
+                val file = fileRepository.findByHashAndDeletedFalse(messageDto.hash)
+                    ?: throw FileHashNotFoundException(messageDto.hash)
+                file.messageType
+            }
+            !messageDto.content.isNullOrBlank() -> {
+                MessageType.TEXT
+            }
+            else -> {
+                MessageType.OTHER
+            }
+        }
+    }
+
 
     @Transactional
     override fun createPublicChat(requestDto: CreatePublicChatRequestDto): GetOneChatResponseDto {
@@ -472,7 +489,6 @@ class ChatServiceImpl(
         val hashBytes = md.digest(id.toString().toByteArray())
         return Base64.getUrlEncoder().withoutPadding().encodeToString(hashBytes)
     }
-
 
     private fun detectFileType(extension: String?): MessageType {
         return when (extension) {
